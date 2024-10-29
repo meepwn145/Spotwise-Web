@@ -1,0 +1,183 @@
+.parkingGrid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr); /* 10 slots per row */
+  gap: 10px; /* Fixed gap between slots */
+  padding: 25px;
+  border: 5px rgba(110, 108, 108, 0.873);
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.parkingSlot {
+  width: 100%; /* width relative to column width */
+  aspect-ratio:  1; /* make slots square */
+  background-color: green; /* default slot color */
+  color: white; /* text color */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.parkingSlot.occupied {
+  background-color: red; /* occupied slot color */
+}
+.parkingContainer {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto;    
+  width: fit-content ;
+  margin-top: 10vh;
+}
+.header {
+ 
+  font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+  font-size: 22px;
+}
+
+.btn-custom-search {
+  background-color: #00b4d8;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  font-family:'Copperplate';
+  box-shadow: 0 2px 4px #03405e ;
+}
+
+.btn-custom-search:hover {
+  background-color: #0056b3;
+}
+
+.btn-custom-assign {
+  background-color: #0b6a3c;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  font-family: 'Copperplate';
+  box-shadow: 0 2px 4px #0b6a3c;
+  margin-top: 2vh;
+  margin-right: 2vh;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.btn-custom-assign:hover {
+  background-color: #239b5d;
+}
+
+.btn-custom-exit {
+  background-color: #dc3545;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  font-family: 'Copperplate';
+  box-shadow: 0 2px 4px #ea3b52;
+  margin-top: 2vh;
+  margin-right: 2vh;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.btn-custom-exit:hover {
+  background-color: #f08080;
+}
+
+.btn-custom-no {
+  background-color: #6c757d;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  margin-right: 10px;
+  border-radius: 5px;
+}
+
+.btn-custom-no:hover {
+  background-color: #5a6268;
+}
+
+.btn-custom-yes {
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  border-radius: 5px;
+}
+
+.btn-custom-yes:hover {
+  background-color: #5cb85c;
+}
+.search-bar {
+  background-color: white;
+  background-image: url('/public/search.png');
+  background-position: 3px ;
+  background-repeat: no-repeat;
+  padding-left: 40px;
+}
+.user-details {
+  background-color: #e0fff6; /* Light grey background */
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 5px #06bee1;
+  margin-top: 10px;
+}
+
+.details-row {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.label {
+  flex: 1; /* Take up one part of the flex container */
+  padding: 10px;
+  background-color: white;
+  border: 1px solid #ccc; /* Light grey border */
+  border-radius: 5px 0 0 5px; /* Rounded corners on the left side */
+  font-weight: bold;
+  font-family: 'Copperplate'
+}
+
+.value {
+  flex: 2; /* Take up two parts of the flex container, making it wider than the label */
+  padding: 10px;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-left: none; /* Remove left border to merge visually with label */
+  border-radius: 0 5px 5px 0; /* Rounded corners on the right side */
+}
+
+/* Custom styles for the toast container */
+.custom-toast-container {
+  /* Aligns the container to the bottom-right of the screen with some padding */
+  z-index: 9999;
+}
+
+/* Custom styles for individual toast notifications */
+.custom-toast {
+  /* Add some shadow and border radius for a cleaner look */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+/* Custom styles for the body of the toast */
+.custom-body {
+  /* Consistent font and padding */
+  font-family: Arial, sans-serif;
+  padding: 8px 16px;
+  color: #333; /* Dark grey text */
+}
+
+/* Additional styling for the progress bar */
+.Toastify__progress-bar {
+  background: linear-gradient(to right, #4caf50, #8bc34a);
+}
+
+/* Styling for toast appearing animation */
+@keyframes Toastify__trackProgress {
+  0% {
+    transform: scaleX(1);
+  }
+  100% {
+    transform: scaleX(0);
+  }
+}
