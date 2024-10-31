@@ -15,22 +15,24 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {faFileInvoiceDollar } from '@fortawesome/free-solid-svg-icons';
 import Card from 'react-bootstrap/Card';
 import { ToastContainer, toast } from 'react-toastify';
+import { useLocation } from 'react-router-dom'; 
+import Sidebar from './Sidebar'; 
 
 const ParkingSlot = () => {
-    const styles = {
-        welcomeMessage: {
-          position: "absolute",
-          top: "10px",
-          right: "10px",
-          margin: "0",
-          color: "#fff",
-          fontFamily: "Rockwell, sans-serif",
-          textShadow: "2px 2px 4px rgba(0, 0, 0, 0.5)",
-        },
-        icon: {
-          marginRight: "5px",
-        },
-      };
+  const styles = {
+    welcomeMessage: {
+      position: "absolute",
+      top: "10px",
+      right: "10px",
+      margin: "0",
+      color: "#fff",
+      fontFamily: "Rockwell, sans-serif",
+      textShadow: "2px 2px 4px rgba(0, 0, 0, 0.5)",
+    },
+    icon: {
+      marginRight: "5px",
+    },
+  };
       const { user } = useContext(UserContext);
   const maxZones = 5;
   const initialSlotSets = [{ title: 'Zone 1', slots: Array(15).fill(false) }];
@@ -41,6 +43,7 @@ const ParkingSlot = () => {
   const [slotSets, setSlotSets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showSidebar, setShowSidebar] = useState(true);
+  const location = useLocation(); // Get the current route path
 
   const totalParkingSpaces = slotSets.reduce((total, slotSet) => total + slotSet.slots.length, 0);
 const availableParkingSpaces = slotSets.reduce((available, slotSet) => {
@@ -560,19 +563,37 @@ const renderFloorTabs = () => {
     {notifications.length > 0 ? renderNotifications() : <p>No new notifications.</p>}
   </div>
 )}
-      <Tab.Container activeKey={currentSetIndex} onSelect={k => setCurrentSetIndex(k)} id="floor-tabs">
-        <Nav variant="tabs" className="flex-row" style={{ justifyContent: 'left', borderColor:'#132B4B' }}>
-          {slotSets.map((slotSet, index) => (
-            <Nav.Item key={index} style={{ width: '150px', textAlign: 'center' }}>
-              <Nav.Link eventKey={index} style={{ borderRadius: '0.25rem', 
-                 backgroundColor: currentSetIndex === index.toString() ? '#00171f' : 'transparent', 
-                 color: currentSetIndex === index.toString() ? 'white' : 'black',
-                 fontWeight: currentSetIndex === index.toString() ? 'bold' : 'normal',
-                 border: currentSetIndex === index.toString() ? '1px solid #28a745' : 'none',
-               }}>{slotSet.title}</Nav.Link>
-            </Nav.Item>
-          ))}
-        </Nav>
+     <Tab.Container activeKey={currentSetIndex.toString()} onSelect={(k) => setCurrentSetIndex(parseInt(k, 10))} defaultActiveKey="0">
+     <Nav variant="tabs" className="flex-row" style={{ justifyContent: 'left', borderColor: '#132B4B' }}>
+  {slotSets.map((slotSet, index) => (
+    <Nav.Item 
+      key={index} 
+      style={{ 
+        width: '150px', 
+        textAlign: 'center', 
+        border: '1px double', // Border for the entire item
+        borderLeft: index !== 0 ? 'none' : '', // Remove left border for all except the first
+        borderRadius: index === 0 ? '15px 0 0 0' : index === slotSets.length - 1 ? '0 15px 0 0' : '0', // Rounded corners only for the first and last tab
+        overflow: 'hidden' // Prevent overflow on border radius
+      }}
+    >
+      <Nav.Link 
+        eventKey={index.toString()} 
+        style={{ 
+          borderRadius: '0', // Remove any inner radius
+          backgroundColor: currentSetIndex === index ? '#132B4B' : 'transparent', 
+          color: currentSetIndex === index ? 'white' : 'black',
+          fontWeight: currentSetIndex === index ? 'bold' : 'normal',
+          padding: '10px 15px', // Adjust padding for consistency
+          height: '100%', // Ensure full height of the tab item
+        }}
+      >
+        {slotSet.title}
+      </Nav.Link>
+    </Nav.Item>
+  ))}
+</Nav>
+
         <Tab.Content>
           {slotSets.map((slotSet, index) => (
             <Tab.Pane eventKey={index} key={index}>
@@ -628,7 +649,8 @@ const renderFloorTabs = () => {
     </div>
   );
 };
-  
+
+
   const handleSlotClick = (index) => {
     setSelectedSlot(index);
     setShowModal(true);
@@ -790,31 +812,9 @@ const renderNotifications = () => {
     <div className="d-flex" >
                  <div>
                  <div className="admin-dashboard">
-                    <div className="sidebar">
-                        <div className="admin-container">
-                            <img 
-                                src="customer.jpg"
-                                alt="Admin"
-                                className="admin-pic" 
-                                style={{ width: '30px', marginRight: '5px', marginLeft: '-50px' }} 
-                            />
-                            {/* Display the user's email if available */}
-                            <h1 style={{fontFamily:'Helvetica', fontSize: 16}}>Welcome {user?.firstName || 'No name found'}</h1>
-                        </div>
-                        <div class="wrapper">
-            <div class="side">
-            <h2>Menu</h2>
-            <ul>
-            <li><a href="Home"><i class="fas fa-home"></i>Home</a></li>
-              <li><a href="ViewSpace"><i class="fas fa-home"></i>Manage Parking</a></li>
-              <li><a href='Reservation'><i class="fas fa-user"></i>Manage Reservation</a></li>
-              <li><a href='OperatorDashboard'><i class="fas fa-address-card"></i>Records</a></li>
-              <li><a href="OperatorProfile"><i class="fas fa-blog"></i>Profile</a></li>
-              <li><a href="/"><i className="fas fa-sign-out-alt" style={{ color: 'red' }}></i>Logout</a></li>
-            </ul>
-          </div>
-        </div>
-      </div>
+
+                        <Sidebar />
+
       <div style={{ flex: 1, padding: '10px' }}>
           {slotSets.length > 0 ? renderFloorTabs() : <p>Loading floors...</p>}
         </div>
@@ -924,7 +924,8 @@ const renderNotifications = () => {
     </div>
  
   );
-};
+              };
+
 
 
 export default ParkingSlot;

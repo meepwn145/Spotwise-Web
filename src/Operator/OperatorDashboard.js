@@ -12,6 +12,7 @@ import { db } from "../config/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import UserContext from '../UserContext';
 import OperatorReserve from './operatorReserve';
+
 import {
   MDBCol,
   MDBContainer,
@@ -30,7 +31,8 @@ function OperatorDashboard() {
   const [agentLastName, setAgentLastName] = useState(user.lastName || "");
   const agentFullName = `${agentFirst} ${agentLastName}`;
   const [data, setData] = useState([]);
-  const [activeCard, setActiveCard] = useState('');
+  const location = useLocation();
+  const [activeCard, setActiveCard] = useState(location.state?.activeCard || 'occupied'); // Default to 'occupied'
   const [pendingAccounts, setPendingAccounts] = useState([]);
   const [establishments, setEstablishments] = useState([]);
   const [parkingSeeker, setParkingSeeker] = useState([]);
@@ -49,7 +51,6 @@ function OperatorDashboard() {
   const [reservedSpaces, setReservedSpaces] = useState(0);
   const totalRevenues = totalUsers * parkingPay;
   const navigate = useNavigate();
-  const location = useLocation();
 
   const styles = {
   };
@@ -158,20 +159,7 @@ function OperatorDashboard() {
 
   useEffect(() => {
     setSummaryCardsData([
-      { 
-        title: 'Total Parking Spaces', 
-        value: `${totalSlots} Total Parking Spaces`,
-        imgSrc: 'totalPark.png', 
-        cardType: 'total', 
-        clickable: false 
-      },
-      { 
-        title: 'Available Spaces', 
-        value: `${availableSlots} Available Spaces`,
-        imgSrc: 'available.png', 
-        cardType: 'available', 
-        clickable: false 
-      },
+   
       { 
         title: 'Occupied Spaces', 
         value: `${occupiedSpaces} Occupied Spaces`,
@@ -268,12 +256,10 @@ function OperatorDashboard() {
 
   return (
     <div className="gradient-custom-2" style={{ backgroundColor: 'white' }}>
-      <nav className="navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: "#132B4B" }}>
         <div className="container">
           <a className="navbar-brand" style={{ padding: 20 }}>
           </a>
         </div>
-      </nav>
       <MDBContainer className="py-4">
         <MDBRow>
           <MDBCol lg="4">

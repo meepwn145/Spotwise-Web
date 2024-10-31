@@ -158,13 +158,11 @@ export default function EditButton() {
 
   return (
     <div className="gradient-custom-2" style={{ backgroundColor: 'white' }}>
-      <nav className="navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: "#132B4B" }}>
         <div className="container">
           <a className="navbar-brand" style={{ padding: 20 }}>
             {/* Your brand/logo here */}
           </a>
         </div>
-      </nav>
       <MDBContainer className="py-4">
         <MDBRow>
           <MDBCol lg="4">

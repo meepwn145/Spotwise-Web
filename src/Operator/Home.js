@@ -10,6 +10,8 @@ import UserContext from "../UserContext";
 import OperatorReserve from "./operatorReserve";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { MDBCol, MDBContainer, MDBRow, MDBCard, MDBCardBody, MDBTypography } from "mdb-react-ui-kit";
+import { Tab, Nav, Row, Col } from "react-bootstrap";
+import Sidebar from './Sidebar'; 
 
 function Home() {
   const { user, setUser } = useContext(UserContext);
@@ -32,6 +34,8 @@ function Home() {
   const [totalRevenueToday, setTotalRevenueToday] = useState(0);
   const [availableSlots, setAvailableSlots] = useState(0);
   const [occupiedSlots, setOccupiedSlots] = useState(0);  // State to keep track of occupied slots
+  const [reservedSlots, setReservedSlots] = useState(0); // Define reservedSlots state
+  const [reservedSpaces, setReservedSpaces] = useState(0);
 
   const styles = {
     welcomeMessage: {
@@ -47,7 +51,10 @@ function Home() {
       marginRight: "5px",
     },
   };
-
+  // Navigation handler for card types
+  const handleNavigation = (cardType) => {
+    navigate('/OperatorDashboard', { state: { activeCard: cardType } });
+  };
   useEffect(() => {
     const fetchEstablishmentData = async () => {
       try {
@@ -78,14 +85,22 @@ function Home() {
     try {
       const slotDataQuery = query(collection(db, `slot/${managementName}/slotData`));
       const slotDataSnapshot = await getDocs(slotDataQuery);
+      const currentUserManagementName = user.managementName;
+      const logsCollectionRef = collection(db, 'slot', currentUserManagementName, 'slotData');
+      const querySnapshot = await getDocs(logsCollectionRef);
+      const slots = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
       const totalOccupied = slotDataSnapshot.docs.filter(doc => doc.data().status === "Occupied").length;
       setOccupiedSlots(totalOccupied);
       setAvailableSlots(totalSlots - totalOccupied);  // Calculate available slots
 
+      const reservedSlots = slots.filter(slot => slot.from === "Reservation");
+      setReservedSpaces(reservedSlots.length);
     } catch (error) {
       console.error("Error fetching parking data:", error);
       setAvailableSlots(0);
+      setReservedSlots(0);
+
     }
   };
 
@@ -124,46 +139,137 @@ function Home() {
   }, [user, db, parkingPay]);
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
-
+  const handleCardClick = (cardType) => {
+    if (cardType === 'occupied') {
+      navigate('/OperatorDashboard', { state: { activeCard: 'occupied' } });
+    } else if (cardType === 'reserve') {
+      navigate('/OperatorDashboard', { state: { activeCard: 'reserve' } });
+    }
+  };
   return (
     <div className="gradient-custom-2" style={{ backgroundColor: "white" }}>
-      <nav className="navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: "#132B4B" }}>
         <div className="container">
+
           <a className="navbar-brand" style={{ padding: 20 }}></a>
         </div>
-      </nav>
       <MDBContainer className="py-4">
         <MDBRow>
-          <MDBCol lg="4">
+          <MDBCol lg="6">
             <OperatorReserve />
           </MDBCol>
-          <MDBCol lg="8">
-            <div className="container text-center" style={{ marginTop: "30px", fontFamily: "Courier New", fontSize: "30px" }}></div>
-            <div className="row mt-3">
-              <div className="col-md-3">
-                <Card>
-                  <Card.Body>
-                    <Card.Title style={{ fontFamily: "Courier New", textAlign: "center" }}>
-                      <FontAwesomeIcon icon={faCar} color="green" /> Parking Availability
-                    </Card.Title>
-                    <Card.Text style={{ textAlign: "center", margin: "0 auto", fontFamily: "Copperplate", fontSize: "20px" }}>
-                      {availableSlots}
-                    </Card.Text>
-                  </Card.Body>
-                </Card>
-              </div>
-              <div className="col-md-3">
-                <Card>
-                  <Card.Body>
-                    <Card.Title style={{ fontFamily: "Courier New", textAlign: "center" }}>
-                      <FontAwesomeIcon icon={faFileInvoiceDollar} color="orange" /> Parking Fee
-                    </Card.Title>
-                    <Card.Text style={{ textAlign: "center", margin: "0 auto", fontFamily: "Copperplate", fontSize: "20px" }}>
-                      {parkingPay}
-                    </Card.Text>
-                  </Card.Body>
-                </Card>
-              </div>
+          <MDBCol lg="11">
+          <div className="summary-cards">
+              {/* Merge your existing cards */}
+              <Tab.Container id="parking-tab" defaultActiveKey="total">
+           <Row className="mb-22">
+  <Col>
+    <Nav variant="pills" className="nav-tabs justify-content-start custom-nav-tabs">
+      <Nav.Item>
+        <Nav.Link
+          eventKey="total"
+          className="custom-tab"
+        >
+          Total Parking Spaces
+        </Nav.Link>
+      </Nav.Item>
+      <Nav.Item>
+        <Nav.Link
+          eventKey="available"
+          className="custom-tab"
+        >
+          Available Parking Spaces
+        </Nav.Link>
+      </Nav.Item>
+      <Nav.Item>
+        <Nav.Link
+          eventKey="fee"
+          className="custom-tab"
+        >
+          Parking Fee
+        </Nav.Link>
+      </Nav.Item>
+      <Nav.Item className="dropdown">
+                        <a className="nav-link custom-tab dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
+                          More
+                        </a>
+                        <ul className="dropdown-menu">
+                          <li>
+                            <button className="dropdown-item" onClick={() => handleNavigation('occupied')}>
+                              Occupied Spaces
+                            </button>
+                          </li>
+                          <li>
+                            <button className="dropdown-item" onClick={() => handleNavigation('reserve')}>
+                              Reserved Spaces
+                            </button>
+                          </li>
+                        </ul>
+                      </Nav.Item>
+    </Nav>
+  </Col>
+</Row>
+
+
+<Row>
+  <Col>
+    <Tab.Content>
+      <Tab.Pane eventKey="total">
+        <div style={{ padding: "20px" }}>
+        <img
+            src="totalPark.png"
+            alt="Total Parking"
+            className="card-images"
+            style={{
+              height: "50px",
+              display: "block",
+              margin: "auto",
+            }}
+          />
+          <h4>Total Parking Spaces</h4>
+          <p>{totalSlots} Total Parking Spaces</p>
+        </div>
+      </Tab.Pane>
+
+      <Tab.Pane eventKey="available">
+        <div style={{ padding: "20px", textAlign: "center" }}>
+          <img
+            src="available.png"
+            alt="Available Spaces"
+            className="card-images"
+            style={{
+              height: "50px",
+              display: "block",
+              margin: "auto",
+              
+            }}
+          />
+          <h4>Available Spaces</h4>
+          <p>{availableSlots} Available Spaces</p>
+        </div>
+      </Tab.Pane>
+
+      <Tab.Pane eventKey="fee">
+        <div style={{ padding: "20px" }}>
+        <img
+            src="pesosign.png"
+            alt="Available Spaces"
+            className="card-images"
+            style={{
+              height: "50px",
+              display: "block",
+              margin: "auto",
+            }}
+          />
+          <h4>Parking Fee</h4>
+          <p>{parkingPay}</p>
+        </div>
+      </Tab.Pane>
+    </Tab.Content>
+  </Col>
+</Row>
+
+      </Tab.Container>
+             
             </div>
           </MDBCol>
         </MDBRow>

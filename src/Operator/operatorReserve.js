@@ -16,6 +16,7 @@ import { ref, uploadBytes, getDownloadURL, listAll, list } from "firebase/storag
 import { v4 } from "uuid";
 import './operatorReserve.css';
 import { logoutUser } from "../components/auth";
+import { NavLink } from 'react-router-dom';
 
 
 const OperatorReserve = () => {
@@ -165,13 +166,55 @@ const OperatorReserve = () => {
     <div class="side">
         <h2>Menu</h2>
         <ul>
-            <li><a href="Home"><i class="fas fa-home"></i>Home</a></li>
-            <li><a href="ViewSpace"><i class="fas fa-home"></i>Manage Parking</a></li>
-            <li><a href='Reservation'><i class="fas fa-user"></i>Manage Reservation</a></li>
-            <li><a href='OperatorDashboard'><i class="fas fa-address-card"></i>Records</a></li>
-            <li><a href="OperatorProfile"><i class="fas fa-blog"></i>Profile</a></li>
-            <li><a onClick={handleLogOut}><i className="fas fa-sign-out-alt" style={{ color: 'red' }}></i>Logout</a></li>
-        </ul> 
+            <li>
+            <NavLink 
+                to="/Home" 
+                className={({ isActive }) => (isActive ? 'actives' : '')}
+              >
+                <i className="fas fa-home"></i>Home
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/ViewSpace" 
+                className={({ isActive }) => (isActive ? 'actives' : '')}
+              >
+                <i className="fas fa-home"></i>Manage Parking
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/Reservation" 
+                className={({ isActive }) => (isActive ? 'actives' : '')}
+              >
+                <i className="fas fa-user"></i>Manage Reservation
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/OperatorDashboard" 
+                className={({ isActive }) => (isActive ? 'actives' : '')}
+              >
+                <i className="fas fa-address-card"></i>Report
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/OperatorProfile" 
+                className={({ isActive }) => (isActive ? 'actives' : '')}
+              >
+                <i className="fas fa-blog"></i>Profile
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/" 
+                className="logout"
+              >
+                <i className="fas fa-sign-out-alt" style={{ color: 'red' }}></i>Logout
+              </NavLink>
+            </li>
+          </ul>
     </div>
     </div>
         </div>

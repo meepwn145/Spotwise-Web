@@ -6,8 +6,8 @@
     
     .sidebar {
       width: 250px;
-      background-color: #132B4B;
-      color: white;
+      background-color: #297eec;
+      color: rgb(100, 31, 31);
       padding: 20px;
     }
   
@@ -57,7 +57,66 @@
     .highlight-background {
       color: #000000; 
   }
+  .nav-tabs {
+    color: #000000; 
+
+    display: flex;
+  }
+  .custom-nav-tabs .custom-tab,
+.custom-nav-tabs .custom-tab.dropdown-toggle,
+.custom-nav-tabs .dropdown-item {
+  color: rgb(0, 0, 0) !important;
+}
+
+.custom-nav-tabs,
+.custom-nav-tabs .dropdown-item:hover {
+  color: rgb(0, 0, 0) !important;
+  background-color: transparent; /* To keep background transparent on hover */
+}
+
+  .nav-link {
+    color: black;
+    font-weight: normal;
+  }
   
+  .nav-link.highlight {
+    color: #665656; /* Your highlight color */
+    font-weight: bold;
+  }
+  
+  .custom-tab {
+    background-color: #87a6c4; /* Light background color for each tab */
+    border: 1px solid #ddd;
+    padding: 10px 15px; /* Padding for button-like feel */
+    margin-right: 8px; /* Spacing between tabs */
+    border-radius: 5px; /* Rounded corners */
+    transition: background-color 0.3s ease;
+  }
+  .custom-tab.active {
+    background-color: #19519b !important; /* Replace with your preferred active tab color */
+    color: white !important; /* White text on active tab */
+    border-radius: 4px; /* Rounded corners for active tab */
+  }
+  /* In your CSS file */
+.title-spacing {
+  margin-bottom: 40px; /* Adjust the value as needed */
+}
+
+  .custom-tab:hover{
+    background-color: #e2e6ea; /* Darken the background on hover and active state */
+    color: #030000;
+  }
+  
+  .dropdown-menu {
+    min-width: 150px; /* Ensure dropdown has enough width */
+  }
+  
+  .dropdown-item {
+    padding: 10px 15px;
+    font-size: 14px;
+  }
+  
+
     .pending{
       font-size: bold;
     }
@@ -80,12 +139,53 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       border-radius: 20px;
     }
-  
-    .card-image {
+    .tab-button {
+      margin-right: 5px;
+      border-width: 2px;
+      transition: background-color 0.3s ease;
+    }
+    
+    .tab-button.active-reservation {
+      background-color: #19519b;
+      color: #ffffff;
+      border-color: #19519b;
+    }
+    .actives {
+      color: #211c63; /* Highlight color */
+      font-weight: bold;
+      border-bottom: 2px solid #ada6a6; /* Adds a bottom border as underline */
+      padding-bottom: 4px; /* Adjusts spacing to prevent the underline from touching the text */
+    }
+    
+    
+    
+    .tab-button.active-accepted {
+      background-color: #19519b;
+      color: #ffffff;
+      border-color: #19519b;
+    }
+    
+    .tab-button.active-declined {
+      background-color: #19519b;
+      color: #ffffff;
+      border-color: #19519b;
+    }
+    
+    .tab-button.inactive {
+      background-color: #ffffff;
+      color: #6c757d;
+      border-color: #6c757d;
+    }
+    
+    .tab-button:hover {
+      opacity: 0.85;
+    }
+    
+    .card-images {
       margin-bottom: 5px;
       width: 50px; 
       height: 50px; 
-      margin-right: 20px;
+      margin-right: 50px;
       border-radius: 50%; 
       object-fit: cover; 
       align-items: center;

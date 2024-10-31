@@ -57,6 +57,7 @@ const Reservation = () => {
     const [showDeclined, setShowDeclined] = useState(false);
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
+    const [activeTab, setActiveTab] = useState("reservation");
 
     const filterByDate = (logEntry) => {
       if (startDate && endDate) {
@@ -65,7 +66,8 @@ const Reservation = () => {
       }
       return true;
   };
-  
+
+
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'notifications'), (snapshot) => {
           snapshot.docChanges().forEach((change) => {
@@ -80,13 +82,94 @@ const Reservation = () => {
         return () => unsubscribe();
       }, []);
 
-
+      const renderTabContent = () => {
+        switch (activeTab) {
+            case "reservation":
+                if (reservationRequests.length === 0) {
+                    return <p className="text-center mt-4">No pending Reservation.</p>;
+                }
+                return reservationRequests.map((request, index) => (
+                    <ReservationRequest key={index} request={request} index={index} />
+                ));
+            case "accepted":
+                return (
+                    <div>
+                        <h6 className="mt-3">Filter by Date</h6>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                            <div style={{ marginRight: '30px' }}>
+                                <label>Start Date:&nbsp;</label>
+                                <DatePicker
+                                    selected={startDate}
+                                    onChange={date => setStartDate(date)}
+                                    dateFormat="yyyy/MM/dd"
+                                    isClearable
+                                />
+                            </div>
+                            <div>
+                                <label>End Date:&nbsp;</label>
+                                <DatePicker
+                                    selected={endDate}
+                                    onChange={date => setEndDate(date)}
+                                    dateFormat="yyyy/MM/dd"
+                                    isClearable
+                                />
+                            </div>
+                        </div>
+                        {historyLog
+                            .filter((log) => log.status === "Accepted" && filterByDate(log))
+                            .map((log, index) => (
+                                <div className="alert alert-success mt-2" key={index}>
+                                    {log.name} - Accepted on {log.date}
+                                </div>
+                            ))}
+                    </div>
+                );
+            case "declined":
+                return (
+                    <div>
+                        <h6 className="mt-3">Filter by Date</h6>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                            <div style={{ marginRight: '30px' }}>
+                                <label>Start Date:&nbsp;</label>
+                                <DatePicker
+                                    selected={startDate}
+                                    onChange={date => setStartDate(date)}
+                                    dateFormat="yyyy/MM/dd"
+                                    isClearable
+                                />
+                            </div>
+                            <div>
+                                <label>End Date:&nbsp;</label>
+                                <DatePicker
+                                    selected={endDate}
+                                    onChange={date => setEndDate(date)}
+                                    dateFormat="yyyy/MM/dd"
+                                    isClearable
+                                />
+                            </div>
+                        </div>
+                        {historyLog
+                            .filter((log) => log.status === "Declined" && filterByDate(log))
+                            .map((log, index) => (
+                                <div className="alert alert-danger mt-2" key={index}>
+                                    {log.name} - Declined on {log.date}
+                                </div>
+                            ))}
+                    </div>
+                );
+            default:
+                return null;
+        }
+    };
+    
+    
     const fetchReservations = async (managementName) => {
         console.log("Fetching reservations for managementName:", managementName);
         const q = query(collection(db, "reservations"), where("managementName", "==", managementName));
         try {
             const querySnapshot = await getDocs(q);
             const reservationPromises = querySnapshot.docs.map(async (reservationDoc) => {
+              console.log("Reservation data:", reservationDoc.data()); 
                 const slotId = reservationDoc.data().slotId;
                 const userEmail = reservationDoc.data().userEmail;
                 const floorTitle = reservationDoc.data().floorTitle; 
@@ -118,6 +201,7 @@ const Reservation = () => {
             id: reservationDoc.id,
             name: reservationDoc.data().name,
             location: reservationDoc.data().currentLocation,
+            imageUri: reservationDoc.data().imageUri,
             userName: userData?.name || "N/A", // Add the userName property
             carPlateNumber: userData?.carPlateNumber || "N/A",
             slot: typeof slotId === "string" ? slotId.slice(1) : "N/A",
@@ -402,299 +486,187 @@ const handleReservation = async (accepted, reservationRequest, index) => {
         const handleClearHistory = () => {
             localStorage.removeItem("historyLog");
         };
-    
-        return (
-        <div style={{
-          marginTop: '-95px',
-          border: "3px solid #7abdea",
-          borderRadius: "8px",
-          padding: "10px",
-          maxWidth: '40vw',
-          height: '50vh',
-          boxSizing: 'border-box',
-          boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
-          overflowY: 'auto',
-          marginLeft: '-120px'
-              }}>
-                <h5 style={{ 
-                  color: "#003851", 
-                  textAlign: "left", 
-                  fontSize: "1.5rem", 
-                  fontWeight: "bold", 
-                  marginBottom: "1.5rem",
-                  
-                }}>
-                  Reservation History
-                </h5>
-                <hr className="divider" />
-                <div style={{ 
-                  flexDirection: "row", 
-                  justifyContent: "space-between", 
-                  alignItems: "center", 
-                  
-                }}>
-                            <div>
-                <button
-                    className="btn btn-primary"
-                    style={{ margin: "5px", width: "150px" }}
-                    onClick={() => setShowAccepted(!showAccepted)}
-                >
-                    {showAccepted ? "Hide Accepted" : "Show Accepted"}
-                </button>
-                <button
-                    className="btn btn-primary"
-                    style={{ margin: "5px", width: "150px" }}
-                    onClick={() => setShowDeclined(!showDeclined)}
-                >
-                    {showDeclined ? "Hide Declined" : "Show Declined"}
-                </button>
-                <button
-                    className="btn btn-danger"
-                    style={{ margin: "5px", width: "150px" }}
-                    onClick={handleClearHistory}
-                >
-                    Clear History
-                </button>
-            </div>
-            <hr className="divider" />
-
-            <div>
-                <h6 className="mt-3">Filter by Date</h6>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <div>
-                        <label>Start Date: </label>
-                        <DatePicker
-                            selected={startDate}
-                            onChange={date => setStartDate(date)}
-                            dateFormat="yyyy/MM/dd"
-                            isClearable
-                        />
-                    </div>
-                    <div>
-                        <label>End Date: </label>
-                        <DatePicker
-                            selected={endDate}
-                            onChange={date => setEndDate(date)}
-                            dateFormat="yyyy/MM/dd"
-                            isClearable
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {showAccepted && (
-                <div>
-                    <h6 className="mt-3">Accepted Reservations</h6>
-                    {historyLog.filter(logEntry => logEntry.status === "Accepted" && filterByDate(logEntry)).map((logEntry, index) => (
-                        <div className="alert alert-success mt-2" key={index}>
-                            <strong>Accepted:</strong> {logEntry.name} requested a reservation on {logEntry.slotId}. Plate Number: {logEntry.plateNumber}, Slot: {logEntry.slotId}
-                        </div>
-                    ))}
-                </div>
-            )}
-            {showDeclined && (
-                <div>
-                    <h6 className="mt-3">Declined Reservations</h6>
-                    {historyLog.filter(logEntry => logEntry.status === "Declined" && filterByDate(logEntry)).map((logEntry, index) => (
-                        <div className="alert alert-danger mt-2" key={index}>
-                            <strong>Declined:</strong> {logEntry.name} requested a reservation on {logEntry.slotId}. Plate Number: {logEntry.plateNumber}, Slot: {logEntry.slotId}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-        </div>
-          
-            
-        );
+        
     };
 
     const ReservationRequest = ({ request, index }) => {
         const [showMapModal, setShowMapModal] = useState(false);
-      
+        const [showImageModal, setShowImageModal] = useState(false);
+        const [imageUrl, setImageUrl] = useState("");
+
         const toggleMapModal = () => {
           setShowMapModal(!showMapModal);
         };
-      
-        return (
-          <div className="reservation-request mb-4 border p-3 rounded bg-light" style={{ maxWidth: '800px' }} key={request.plateNumber}>
-            {/* Headers */}
-            <div className="d-flex justify-content-between mb-2 text-muted">
-              <div className="p-2"><strong>Name</strong></div>
-              <div className="p-2"><strong>Time of Request</strong></div>
-              <div className="p-2"><strong>Plate Number</strong></div>
-              <div className="p-2"><strong>Floor</strong></div>
-              <div className="p-2"><strong>Slot Number</strong></div>
-            </div>
-      
-            {/* Details */}
-            <div className="d-flex justify-content-between mb-2">
-              <div className="p-2">{request.userName}</div>
-              <div className="p-2">{request.timeOfRequest}</div>
-              <div className="p-2">{request.carPlateNumber}</div>
-              <div className="p-2">{request.floorTitle}</div>
-              <div className="p-2">{request.slotId + 1}</div>
-            </div>
-        {/* MA CLICK NGA ICON SA MAP */}
-        <Button variant="primary" onClick={toggleMapModal}>
-          <i className="bi bi-geo-alt"></i> View Map
-        </Button>
 
-        {/* PARA SA MAP*/}
-        <Modal show={showMapModal} onHide={toggleMapModal} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>Map</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {/* <img
-              src={`https://maps.googleapis.com/maps/api/staticmap?center=${request.latitude},${request.longitude}&zoom=14&size=600x300&maptype=roadmap&markers=color:red%7Clabel:S%7C${request.latitude},${request.longitude}&key=YOUR_API_KEY`}
-              alt="Map"
-              style={{ width: "100%", height: "auto" }}
-            /> */}
-            {request?.location && user.coordinates && (
-              <MapComponent
-                origin={request.location}
-                destination={user.coordinates}
-              />
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={toggleMapModal}>
-              Close
-            </Button>
-          </Modal.Footer>
-        </Modal>
+        const toggleImageModal = () => {
+          setShowImageModal(!showImageModal);
+      };
 
-        {/* Buttons */}
-        <div className="d-flex flex-row align-items-center mt-2">
-          <button
-            className="btn btn-success mr-2"
+      const openImageModal = () => {
+        console.log("Image URL:", request.imageUri); // Log the URL to check its validity
+        setImageUrl(request.imageUri);
+        toggleImageModal();
+    };
+      
+    return (
+      <div className="reservation-request mb-4 border p-3 rounded bg-light" style={{maxWidth: '100%' }} key={request.plateNumber}>
+      {/* Headers */}
+      <div className="d-flex justify-content-between mb-2 text-muted">
+        <div className="p-2"><strong>Name</strong></div>
+        <div className="p-2"><strong>Time of Request</strong></div>
+        <div className="p-2"><strong>Plate Number</strong></div>
+        <div className="p-2"><strong>Floor</strong></div>
+        <div className="p-2"><strong>Slot Number</strong></div>
+      </div>
+    
+      {/* Details Row */}
+      <div className="d-flex justify-content-between mb-2">
+        <div className="p-2">{request.userName}</div>
+        <div className="p-2">{request.timeOfRequest}</div>
+        <div className="p-2">{request.carPlateNumber}</div>
+        <div className="p-1">{request.floorTitle}</div>
+        <div className="p-2">{request.slotId + 1}</div>
+      </div>
+    
+      {/* Slot Number and Action Buttons Row */}
+      <div className="d-flex align-items-center">
+        <div className="ms-auto d-flex">
+          <Button variant="primary" onClick={toggleMapModal} className="me-4" size="sm">
+            View Map
+          </Button>
+          <Button variant="secondary" onClick={openImageModal} className="me-4" size="sm">
+            View Proof of Payment
+          </Button>
+          <Button
+            variant="success"
             onClick={() => handleReservation(true, request, index)}
+            className="me-4"
+            size="sm"
           >
             Accept Reservation
-          </button>
-          <button
-            className="btn btn-danger"
+          </Button>
+          <Button
+            variant="danger"
             onClick={() => handleReservation(false, request, index)}
+            size="sm"
           >
             Decline Reservation
-          </button>
+          </Button>
         </div>
       </div>
+    
+      {/* Map Modal */}
+      <Modal show={showMapModal} onHide={toggleMapModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Map</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {request?.location && user.coordinates && (
+            <MapComponent
+              origin={request.location}
+              destination={user.coordinates}
+            />
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={toggleMapModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    
+      {/* Image Modal */}
+      <Modal show={showImageModal} onHide={toggleImageModal} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Proof of Payment</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {imageUrl ? (
+            <img src={imageUrl} alt="Reservation Image" style={{ width: "100%", height: "auto" }} />
+          ) : (
+            <p>Loading image...</p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={toggleImageModal}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </div>
+    
     );
+    
   };
 
       
 
-    return (
-        <div>
+  return (
+    <div>
         <section
             style={{
                 backgroundSize: "cover",
                 backgroundRepeat: "no-repeat",
                 minHeight: "100vh",
-                backgroundColor: "white", // Set a background color in case the image is not fully loaded
+                backgroundColor: "white",
             }}
         >
             <div>
-                
-            <nav className="navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: "#132B4B"}}>
-    <div className="container d-flex justify-content-between">
-        <a className="navbar-brand" style={{padding: 35}}>
-            
-        </a>
-        <div>
-            <button className="btn" onClick={() => setShowNotification(!showNotification)} style={{ color: 'white', border: 'none', background: 'none' }}>
-                <FontAwesomeIcon icon={faBell} size="lg" />
-                {/* Optionally display a badge with notification count */}
-                {showNotification && <span className="badge rounded-pill bg-danger">3</span>}
-            </button>
-        </div>
-    </div>
-</nav>
-{/* <div className="main-content">
-                        <div className="summary-cards">
-                            {summaryCardsData.map(card => (
-                                <div key={card.title} className={`card card-${card.cardType}`} onClick={() => handleCardClick(card.cardType)}>
-                                    <img src={card.imgSrc} alt={card.title} className="card-image" />
-                                    <div className="card-content">
-                                        <div className="card-title">{card.title}</div>
-                                        <div className="card-value">{card.value}</div>
-                                    </div>    
-                                </div>
-                            ))}
-                        </div>
-                        </div>
-                        {renderFormBasedOnCardType()}      */}
-                        <hr className="divider" />
-                          
-                <MDBContainer className="py-4">
-                    <MDBRow>
-                        <MDBCol lg="4">
-                            <OperatorReserve />
-                        </MDBCol>
-                    
-                        <MDBCol lg="4">
-                    <div >
-                   
-                    <h3 style={{
-                      color: "#003851",
-                      textAlign: "center",
-                      fontSize: "1.5rem",        // Keep rem for scalable font size
-                      fontWeight: "bold",
-                      marginBottom: "1.5rem",  // Use rem to maintain scalable spacing
-                      marginLeft: '-60vh',         // Avoid negative margins that cause overflow
-                      marginTop: '0'           // Adjust this to suit your layout needs
-                    }}>
-                      Parking Reservation Management
-                    </h3>
-                    
-                    <div style={{
-                    width: "100%",           // Use percentage to make the width responsive
-                    height: "40vh",          // Use vh for a responsive height based on the viewport
-                    overflowY: "scroll",
-                    padding: "1rem",         // Use rem for padding to scale with the font size
-                    background: "#132B4B",
-                    marginLeft: '-30vh',         // Explicitly set marginLeft to 0 to ensure it aligns left
-                  }}>
-                  
-                        {reservationRequests.length === 0 ? (
-                            <p>No reservation</p>
-                        ) : (
-                            reservationRequests.map((request, index) => (
-                                <ReservationRequest
-                                    request={request}
-                                    index={index}
-                                    key={index}
-                                    slotIndex={request.slotId} // Pass the slotId as slotIndex
-                                />
-                            ))
-                        )}
-                        
+                <div className="container d-flex justify-content-between">
+                    <a className="navbar-brand" style={{ padding: 35 }}></a>
+                    <div>
+                        <button
+                            className="btn"
+                            onClick={() => setShowNotification(!showNotification)}
+                            style={{ color: 'white', border: 'none', background: 'none' }}
+                        >
+                            <FontAwesomeIcon icon={faBell} size="lg" />
+                            {showNotification && <span className="badge rounded-pill bg-danger">3</span>}
+                        </button>
                     </div>
                 </div>
-              </MDBCol>
-              <MDBCol lg="4">
-                <nav
-                  style={{
-                    backgroundColor: "white",
-                    marginLeft: "auto",
-                    borderWidth: 1,
-                    borderColor: "#003851",
-                    marginTop: "26%",
-                  }}
-                >
-                  <HistoryLog historyLog={historyLog} />
-                </nav>
-              </MDBCol>
-            </MDBRow>
-          </MDBContainer>
-        </div>
-      </section>
 
-      <div></div>
+                <MDBContainer className="py-6">
+                    <MDBRow>
+                        <MDBCol lg="2">
+                            <OperatorReserve />
+                        </MDBCol>
+                        <MDBCol lg="10">
+                            <h3 className="text-center mb-4">Parking Reservation Management</h3>
+                            <div className="d-flex justify-content-center mb-3">
+                                <button
+                                    className={`btn tab-button ${activeTab === "reservation" ? "active-reservation" : "inactive"}`}
+                                    onClick={() => setActiveTab("reservation")}
+                                >
+                                    Show Reservation
+                                </button>
+                                <button
+                                    className={`btn tab-button ${activeTab === "accepted" ? "active-accepted" : "inactive"}`}
+                                    onClick={() => setActiveTab("accepted")}
+                                >
+                                    Show Accepted
+                                </button>
+                                <button
+                                    className={`btn tab-button ${activeTab === "declined" ? "active-declined" : "inactive"}`}
+                                    onClick={() => setActiveTab("declined")}
+                                >
+                                    Show Declined
+                                </button>
+                            </div>
+                            <MDBCard>
+                                <MDBCardBody>
+                                    <div>{renderTabContent()}</div>
+                                </MDBCardBody>
+                            </MDBCard>
+                        </MDBCol>
+                        <MDBCol lg="4">
+                            <HistoryLog historyLog={historyLog} />
+                        </MDBCol>
+                    </MDBRow>
+                </MDBContainer>
+            </div>
+        </section>
     </div>
-  );
-};
-
+);
+                            };
 export default Reservation;

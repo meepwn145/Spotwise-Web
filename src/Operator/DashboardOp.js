@@ -541,7 +541,7 @@ function DashboardOp() {
                 <ul>
                     <li><a href="DashboardOp"><i class="fas fa-home"></i>Home</a></li>
                     <li><a href='Reservation'><i class="fas fa-user"></i>Manage Reservation</a></li>
-                    <li><a href='OperatorDashboard'><i class="fas fa-address-card"></i>Records</a></li>
+                    <li><a href='OperatorDashboard'><i class="fas fa-address-card"></i>Report</a></li>
                     <li><a href="OperatorProfile"><i class="fas fa-blog"></i>Profile</a></li>
                     <li><a href="/"><i className="fas fa-sign-out-alt" style={{ color: 'red' }}></i>Logout</a></li>
                 </ul> 
