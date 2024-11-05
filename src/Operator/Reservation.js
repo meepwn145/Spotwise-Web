@@ -35,7 +35,6 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
 const Reservation = () => {
-
     const { user } = useContext(UserContext);
     const [reservationRequests, setReservationRequests] = useState([]);
     const [historyLog, setHistoryLog] = useState([]);
@@ -202,6 +201,8 @@ const Reservation = () => {
             name: reservationDoc.data().name,
             location: reservationDoc.data().currentLocation,
             imageUri: reservationDoc.data().imageUri,
+            reservationId: reservationDoc.data().reservationId || "0",
+            imageUri: reservationDoc.data().imageUri,
             userName: userData?.name || "N/A", // Add the userName property
             carPlateNumber: userData?.carPlateNumber || "N/A",
             slot: typeof slotId === "string" ? slotId.slice(1) : "N/A",
@@ -276,8 +277,10 @@ const Reservation = () => {
     return data.sub_id; // assuming the response contains `sub_id`
 };
 const handleReservation = async (accepted, reservationRequest, index) => {
-  const { id, userName, carPlateNumber, slotId, timeOfRequest, floorTitle, userToken, userEmail } = reservationRequest;
-  const status = accepted ? "Accepted" : "Declined";
+  const { id, userName, carPlateNumber, slotId, timeOfRequest, floorTitle, userToken, userEmail, reservationId,
+    } = reservationRequest;
+    const status = accepted ? "Accepted" : "Declined";
+		console.log("reservationId", reservationId);
 
   const logEntry = {
       status,
@@ -306,6 +309,7 @@ const handleReservation = async (accepted, reservationRequest, index) => {
                   userEmail,
               },
               from: "Reservation",
+              reservationId: reservationId,
               status: "Occupied",
               timestamp: new Date(),
               reserveStatus: 'Accepted',
@@ -379,6 +383,7 @@ const handleReservation = async (accepted, reservationRequest, index) => {
               slotId,
               floorTitle,
               status: "Occupied",
+              reservationId: reservationId,
               timestamp: new Date(),
               resStatus: "Accepted",
               managementName: user.managementName,
@@ -404,6 +409,7 @@ const handleReservation = async (accepted, reservationRequest, index) => {
               slotId,
               floorTitle,
               status: "Occupied",
+              reservationId: reservationId,
               timestamp: new Date(),
               resStatus: "Declined",
               managementName: user.managementName,

@@ -340,7 +340,6 @@ const fetchData = async (managementName) => {
       const collectionRef = collection(db, 'user');
       const q = query(collectionRef, where('carPlateNumber', '==', searchInput));
       const querySnapshot = await getDocs(q);
-  
       const user = querySnapshot.docs.find(doc => doc.data().carPlateNumber === searchInput);
   
       if (user) {
@@ -417,6 +416,11 @@ const fetchData = async (managementName) => {
   const [userPlateNumber, setUserPlateNumber] = useState("");
 
   const handleAddToSlot = (carPlateNumber, slotIndex) => {
+    const slot = slotSets[currentSetIndex].slots[slotIndex];
+    if (slot.occupied) {
+        setErrorMessage("Cannot assign an already occupied slot.");
+        return;
+    }
     if (!carPlateNumber || carPlateNumber.trim() === "") {
       setErrorMessage("Please enter a plate number.");
       return;
@@ -426,6 +430,19 @@ const fetchData = async (managementName) => {
       if (!confirmAssign) {
         return;
       }
+    }
+
+    const existingSlotIndex = findPlateNumber(carPlateNumber);
+    if (existingSlotIndex !== -1 && existingSlotIndex !== slotIndex) {
+        setErrorMessage(`Car plate number already assigned to slot ${existingSlotIndex + 1} on this floor.`);
+        return;
+    }
+    
+    const slotData = findPlateAcrossFloors(carPlateNumber);
+    if (slotData.found && slotData.floorIndex !== currentSetIndex) {
+        const floorName = slotSets[slotData.floorIndex].title;
+        setErrorMessage(`Car plate number already assigned to floor "${floorName}" in slot ${slotData.slotIndex + 1}.`);
+        return;
     }
     const floorTitle = slotSets[currentSetIndex].title || "General Parking";
     const uniqueElement = new Date().getTime(); // Using timestamp for uniqueness
@@ -439,7 +456,7 @@ const fetchData = async (managementName) => {
     const updatedUserDetails = {
       carPlateNumber,
       slotId: slotIndex,
-      email: userDetails?.email || "",
+      userEmail: userDetails?.email || "",
       contactNumber: userDetails?.contactNumber || "",
       carPlateNumber: userDetails?.carPlateNumber || carPlateNumber,
       car: userDetails?.car || "",
@@ -463,7 +480,7 @@ const fetchData = async (managementName) => {
     saveSlotsToLocalStorage(managementName, updatedSets);
     addToLogs(updatedUserDetails, slotIndex);
 
-
+    console.log(`managementName: ${managementName}, floorTitle: ${floorTitle}`);
     const managementDocRef = doc(db, 'slot', managementName);
     const slotCollectionRef = collection(managementDocRef, 'slotData');
     const slotDocRef = doc(slotCollectionRef, uniqueDocName);
@@ -474,69 +491,65 @@ const fetchData = async (managementName) => {
       userDetails: updatedUserDetails 
     };
 
-     setDoc(slotDocRef, slotUpdate, { merge: true })
-    .then(() => console.log(`Slot ${uniqueSlotId} status updated in Firebase under ${managementName}, floor ${floorTitle}`))
+    setDoc(slotDocRef, slotUpdate, { merge: true })
+    .then(() => {
+      console.log(`Slot ${uniqueSlotId} status updated in Firebase under ${managementName}, floor ${floorTitle}`);
+      if (updatedUserDetails.userEmail) {
+        sendEntryNotification(updatedUserDetails, floorTitle, slotIndex);
+      } else {
+        console.log("No userEmail provided, cannot send entry notification.");
+      }
+    })
     .catch(error => console.error('Error updating slot status in Firebase:', error));
   
     setErrorMessage("");
 };
+const findPlateNumber = (plateNumber) => {
+  return slotSets[currentSetIndex].slots.findIndex(s => s.userDetails && s.userDetails.carPlateNumber === plateNumber);
+};
 
-const handleAcceptReservation = async (reservationId, slotId) => {
-  // Ensure user context is available
-  if (!user || !user.managementName) {
-    console.error('User context with managementName is required.');
+const findPlateAcrossFloors = (plateNumber) => {
+  for (let i = 0; i < slotSets.length; i++) {
+    const slots = slotSets[i].slots;
+    for (let j = 0; j < slots.length; j++) {
+      if (slots[j].occupied && slots[j].userDetails && slots[j].userDetails.carPlateNumber === plateNumber) {
+        return { found: true, floorIndex: i, slotIndex: j };
+      }
+    }
+  }
+  return { found: false };
+};
+
+const sendEntryNotification = async (userDetails, floorTitle, slotIndex) => {
+  if (!userDetails.userEmail) {
+    console.error("User email is missing, cannot send notification.");
     return;
   }
-
-  try {
-    // Fetch the reservation details from Firebase
-    const reservationRef = doc(db, 'reservations', reservationId);
-    const reservationSnapshot = await getDoc(reservationRef);
-    if (!reservationSnapshot.exists()) {
-      console.error('No such reservation!');
-      return;
-    }
-    const reservationData = reservationSnapshot.data();
-
-    // Extract timestamp from reservationData
-    const reservationTimestamp = reservationData.timestamp;
-
-    // Mark the slot as occupied in Firebase
-    const slotDocRef = doc(db, 'slot', user.managementName, 'slotData', `slot_${slotId}`);
-    await setDoc(slotDocRef, {
-      status: 'Occupied',
-      userDetails: {
-        name: reservationData.userName,
-        email: reservationData.userEmail,
-        // Add additional details if necessary
+  const userTokenDocRef = doc(db, "userTokens", userDetails.userEmail);
+  const docSnap = await getDoc(userTokenDocRef);
+  if (docSnap.exists()) {
+    const { token } = docSnap.data();
+    const notificationData = {
+      appId: 24190,
+      appToken: '7xmUkgEHBQtdSvSHDbZ9zd',
+      title: 'Parking Slot Assigned',
+      message: `Your parking slot on ${floorTitle} floor at slot number ${slotIndex + 1} is confirmed at ${managementName}.`,
+      targetUsers: [token],
+      subID: userDetails.userEmail
+    };
+    fetch('https://app.nativenotify.com/api/indie/notification', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${notificationData.appToken}`
       },
-      timestamp: reservationTimestamp // Use the timestamp from reservationData
-    }, { merge: true });
-
-    // Update the local state to reflect the occupied slot
-    setSlotSets((prevSlotSets) => {
-      return prevSlotSets.map(slotSet => {
-        return {
-          ...slotSet,
-          slots: slotSet.slots.map((slot, index) => {
-            // Check if this is the slot that we are updating
-            if (slot.id === slotId) {
-              // Return a new object with the updated occupied status
-              return { ...slot, occupied: true };
-            }
-            return slot; // Otherwise, return the slot as is
-          }),
-        };
-      });
-    });
-
-    // Optionally save to local storage
-    saveSlotsToLocalStorage(user.managementName, slotSets);
-
-    console.log(`Reservation accepted for slot ID: ${slotId}`);
-
-  } catch (error) {
-    console.error('Error accepting reservation:', error);
+      body: JSON.stringify(notificationData)
+    })
+    .then(response => response.text())
+    .then(text => console.log('Entry notification sent successfully:', text))
+    .catch(error => console.error('Error sending entry notification:', error));
+  } else {
+    console.error("No device token found for userEmail:", userDetails.userEmail);
   }
 };
 
@@ -593,7 +606,6 @@ const renderFloorTabs = () => {
     </Nav.Item>
   ))}
 </Nav>
-
         <Tab.Content>
           {slotSets.map((slotSet, index) => (
             <Tab.Pane eventKey={index} key={index}>
@@ -649,55 +661,68 @@ const renderFloorTabs = () => {
     </div>
   );
 };
-
-
-  const handleSlotClick = (index) => {
-    setSelectedSlot(index);
-    setShowModal(true);
-    setUserDetails(slotSets[currentSetIndex].slots[index]?.userDetails || null);
-  };
   
+const handleSlotClick = (index) => {
+  const slot = slotSets[currentSetIndex].slots[index];
+  setSelectedSlot(index);
+  setShowModal(true);
+  setUserDetails(slotSets[currentSetIndex].slots[index]?.userDetails || null);
+  setShowButtons(!slot.occupied); 
+};
+
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
-  const handleExitSlot = async (slotIndex) => {
-  // Check if the slot is already empty
-  if (!slotSets[currentSetIndex].slots[slotIndex].occupied) {
-    setErrorMessage("This slot is already empty.");
-    return;
-  }
-
-  // Assuming managementName is available in your component
-  const managementDocRef = doc(db, 'slot', managementName);
-  const slotCollectionRef = collection(managementDocRef, 'slotData');
-  const floorTitle = slotSets[currentSetIndex].title || "General Parking";
-  const slotDocRef = doc(slotCollectionRef, `slot_${floorTitle}_${slotIndex}`);
-  const userDetails = slotSets[currentSetIndex].slots[slotIndex].userDetails;
-
-  console.log("User Details at exit:", userDetails);
-
-  if (!userDetails.email) {
-    const userRef = collection(db, 'user');
-    const q = query(userRef, where('email', '==',userDetails.userEmail));
-    const userSnap = await getDocs(q);
-    if (!userSnap.empty) {
-      userDetails.email = userSnap.docs[0].data().email;
-    } else {
-      console.error('User not found in users collection');
+  const handleExitSlot = async (slotIndex, carPlateNumber) => {
+    // Check if the slot is already empty
+    if (!slotSets[currentSetIndex].slots[slotIndex].occupied) {
+      setErrorMessage("This slot is already empty.");
       return;
     }
-  }
-  try {
-    await deleteDoc(slotDocRef);
-    console.log(`Slot ${slotIndex} data deleted from Firebase under ${managementName}`);
-    if (userDetails) {
-      await sendExitNotification(userDetails, floorTitle, slotIndex);
+  
+    const managementDocRef = doc(db, 'slot', managementName);
+    const slotCollectionRef = collection(managementDocRef, 'slotData');
+    const floorTitle = slotSets[currentSetIndex].title || "General Parking";
+    const slotDocRef = doc(slotCollectionRef, `slot_${floorTitle}_${slotIndex}`);
+    const userDetails = slotSets[currentSetIndex].slots[slotIndex].userDetails;
+    console.log("Entered Car Plate Number:", carPlateNumber);
+    console.log("Carplate number", userDetails.carPlateNumber);
+    console.log("User Details at exit:", userDetails);
+    
+    console.log("Carplate number", userDetails.carPlateNumber);
+    console.log("User Details at exit:", userDetails);
+  
+    if (carPlateNumber !== userDetails.carPlateNumber) {
+      console.error("Car plate number mismatch.");
+      setErrorMessage(`Car plate number mismatch. Entered: ${carPlateNumber}, Expected: ${userDetails.carPlateNumber || "not registered"}. Please try again.`);
+      return;
     }
-  } catch (error) {
-    console.error('Error deleting slot data from Firebase:', error);
-    setErrorMessage('Error processing slot exit. Please try again.');
-  }
 
-  updateSets(slotIndex);
-};
+    try {
+      await deleteDoc(slotDocRef);
+      console.log(`Slot ${slotIndex} data deleted from Firebase under ${managementName}`);
+      
+      // Only attempt to send notifications if userEmail is not empty
+      if (userDetails.userEmail) {
+        const userRef = collection(db, 'user');
+        const q = query(userRef, where('email', '==', userDetails.userEmail));
+        const userSnap = await getDocs(q);
+  
+        if (!userSnap.empty) {
+          await sendExitNotification(userSnap.docs[0].data(), floorTitle, slotIndex);
+        } else {
+          console.error('User not found in users collection');
+        }
+      } else {
+        console.log('No userEmail provided, exiting slot without sending notification.');
+      }
+    } catch (error) {
+      console.error('Error processing slot exit:', error);
+      setErrorMessage('Error processing slot exit. Please try again.');
+    }
+  
+    updateSets(slotIndex);
+  };
+  
+  
 
 const sendExitNotification = async (userDetails, floorTitle, slotIndex) => {
   const userTokenDocRef = doc(db, "userTokens", userDetails.email);
@@ -709,7 +734,7 @@ const sendExitNotification = async (userDetails, floorTitle, slotIndex) => {
       appId: 24190, 
       appToken: '7xmUkgEHBQtdSvSHDbZ9zd', 
       title: 'Parking Slot Exited',
-      message: `You have exited your parking slot on ${floorTitle} floor at slot number ${slotIndex + 1}. Thank you for visiting!`,
+      message: `You have exited ${managementName} parking slot on ${floorTitle} floor at slot number ${slotIndex + 1}. Thank you for visiting!`,
       targetUsers: [token], 
       subID: userDetails.email 
     };
@@ -812,13 +837,12 @@ const renderNotifications = () => {
     <div className="d-flex" >
                  <div>
                  <div className="admin-dashboard">
-
-                        <Sidebar />
+                 <Sidebar />
 
       <div style={{ flex: 1, padding: '10px' }}>
           {slotSets.length > 0 ? renderFloorTabs() : <p>Loading floors...</p>}
         </div>
-      
+
         <Modal show={showModal} onHide={handleCloseModal}>
     <Modal.Header closeButton >
         <Modal.Title >Parking Slot {selectedSlot + 1}</Modal.Title>
@@ -829,8 +853,9 @@ const renderNotifications = () => {
             <SearchForm
                 onSearch={searchInFirebase}
                 onSelectSlot={(carPlateNumber) => handleAddToSlot(carPlateNumber, selectedSlot)}
-                onExitSlot={() => handleExitSlot(selectedSlot)}
+                onExitSlot={(carPlateNumber) => handleExitSlot(selectedSlot, carPlateNumber)}
                 selectedSlot={selectedSlot}
+                slotOccupied={slotSets[currentSetIndex].slots[selectedSlot].occupied} 
                 userDetails={userDetails}
             />
         )}
@@ -872,34 +897,47 @@ const renderNotifications = () => {
           )}
             {showButtons && (
             <div>
-                <button className='btn-custom-assign' onClick={() => {
-                    if (!userFound) {
-                        setShowConfirmation(true); 
-                    } else {
-                        handleAddToSlot(userPlateNumber, selectedSlot);
-                    }
-                }}>
-                    Assign
-                </button>
-                <button className= 'btn-custom-exit'  onClick={() => handleExitSlot(selectedSlot)}>
-                    Exit
-                </button>
-            </div>
-        )}
-        {showConfirmation && (
-            <div>
-                <p style={{marginTop: '10px', fontFamily:'Copperplate'}}>No record found. Do you want to proceed?</p>
-                <button className='btn-custom-no' onClick={() => setShowConfirmation(false)}>
-                    No
-                </button>
-                <button className='btn-custom-yes' onClick={() => {
+                  <button className='btn-custom-assign' onClick={() => {
+            if (!userFound) {
+                setShowConfirmation(true); 
+            } else {
+                // Check if the slot is not occupied before allowing assignment
+                const slot = slotSets[currentSetIndex].slots[selectedSlot];
+                if (!slot.occupied) {
                     handleAddToSlot(userPlateNumber, selectedSlot);
-                    setShowConfirmation(false);
-                }}>
-                    Yes
-                </button>
-            </div>
-        )}
+                } else {
+                    setErrorMessage("Cannot assign an already occupied slot.");
+                }
+            }
+        }}>
+            Assign
+        </button>
+        <button className= 'btn-custom-exit'  onClick={() => handleExitSlot(selectedSlot, userPlateNumber)}>
+            Exit
+        </button>
+    </div>
+)}
+{showConfirmation && (
+    <div>
+        <p style={{marginTop: '10px', fontFamily:'Copperplate'}}>No record found. Do you want to proceed?</p>
+        <button className='btn-custom-no' onClick={() => setShowConfirmation(false)}>
+            No
+        </button>
+        <button className='btn-custom-yes' onClick={() => {
+            // Check again if the slot is not occupied before allowing assignment
+            const slot = slotSets[currentSetIndex].slots[selectedSlot];
+            if (!slot.occupied) {
+                handleAddToSlot(userPlateNumber, selectedSlot);
+                setShowConfirmation(false);
+            } else {
+                setErrorMessage("Cannot assign an already occupied slot.");
+                setShowConfirmation(false);
+            }
+        }}>
+            Yes
+        </button>
+    </div>
+)}
     </Modal.Body>
     <Modal.Footer>
         {recordFound ? null : <div style={{ color: 'red' }}>No record found for this car plate number.</div>}
@@ -924,8 +962,7 @@ const renderNotifications = () => {
     </div>
  
   );
-              };
-
+};
 
 
 export default ParkingSlot;
