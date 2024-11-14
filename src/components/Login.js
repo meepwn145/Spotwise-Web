@@ -159,13 +159,12 @@ function Login() {
 	const buttonStyle = {
 		width: "100%",
 		padding: "12px",
-		backgroundColor: "rgba(4, 55,55, 0.7)",
 		color: "white",
 		border: "none",
 		borderRadius: "5px",
 		cursor: "pointer",
 		fontSize: "18px",
-		backgroundColor: "#39e75f",
+		backgroundColor: "#4d659d",
 		fontFamily: "Helvetica",
 		borderRadius: "100px",
 	};
@@ -174,7 +173,7 @@ function Login() {
 		width: "100%",
 		padding: "12px",
 		marginTop: "25px",
-		backgroundColor: "rgba(4, 55,55, 0.7)",
+		backgroundColor: "#536daa",
 		color: "white",
 		border: "none",
 		borderRadius: "5px",
@@ -257,7 +256,6 @@ function Login() {
 				<img src="wingsMoto1.png" alt="Wings Moto" style={imageStyle} />
 				<Link
 					className="navbar-brand"
-					to="/Dashboard"
 					style={{ fontSize: "25px", marginLeft: "100px", fontFamily: "Helvetica", color: "white" }}
 				>
 					Spotwise
@@ -308,12 +306,7 @@ function Login() {
 							<a href="/forget">Forgot Password?</a>
 						</p>
 						<div style={separtor}></div>
-						<div style={line}></div>
-						<div style={logoContainer}>
-							<img src="facebook.png" style={logo} />
-							<img src="googleLogo.png" style={logo2} />
-							<img src="instagram.png" style={logo3} />
-						</div>
+						
 					</form>
 				</div>
 				<div style={imageContainerStyle}>

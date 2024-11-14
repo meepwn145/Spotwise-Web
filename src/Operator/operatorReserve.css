@@ -78,6 +78,22 @@
     color: black;
     font-weight: normal;
   }
+  .custom-card {
+    border-radius: 20px;
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.3) !important; /* Enforces shadow visibility */
+    background-color: #eceef6!important; /* Force background color */
+    transition: transform 0.2s ease;
+  }
+  
+  
+  .custom-card:hover {
+    transform: translateY(-5px); /* Slight lift on hover */
+  }
+  
+  .text-center h5, .text-center .text-muted {
+    color: #4A4A4A; /* Adjust text color for contrast */
+  }
+  
   
   .nav-link.highlight {
     color: #665656; /* Your highlight color */

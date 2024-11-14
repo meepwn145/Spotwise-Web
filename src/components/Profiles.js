@@ -7,6 +7,9 @@ import { updateDoc, doc, getDoc } from "firebase/firestore";
 import { storage } from "../config/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { v4 } from "uuid";
+import EstablishmentReserve from "./establishmentReserve";
+import "./profile.css"; 
+
 
 export default function EditButton() {
     const navigate = useNavigate();
@@ -147,43 +150,36 @@ export default function EditButton() {
         height: "35px",
     };
 
-    return (
-        <section style={{ backgroundSize: "cover", backgroundRepeat: "no-repeat", minHeight: "100vh", backgroundColor: "white" }}>
-            <div className="admin-dashboard">
-                <div className="sidebar">
-                    <div className="admin-container"></div>
-                    <div className="wrapper">
-                        <div className="side">
-                            <div>
-                                <MDBCardImage src={profileImageUrl} alt="Operator Profile Logo" className="rounded-circle" style={{ width: "70px" }} />
-                                <p style={{ fontFamily: "Georgina", fontSize: "20px", fontWeight: "bold", color: 'white' }}>Administrator</p>
-                                <p style={{ fontFamily: "Georgina", color: "white", fontWeight: "bold", fontSize: 12, marginTop: -15 }}>
-                                    {managementName}
-                                </p>
-                            </div>
-                            <h2>Menu</h2>
-                            <ul>
-                                <li><a href="Dashboard"><i className="fas fa-home"></i>Home</a></li>
-                                <li><a href='AgentRegistration'><i className="fas fa-user"></i>Account Management</a></li>
-                                <li><a href='Tracks'><i className="fas fa-project-diagram"></i>Operator Registration</a></li>
-                                <li><a href="Profiles"><i className="fas fa-blog"></i>Profile</a></li>
-                                <li><a href="Feedback"><i className="fas fa-blog"></i>Feedback</a></li>
-                                <li><a href="/"><i className="fas fa-sign-out-alt" style={{ color: 'red' }}></i>Logout</a></li>
-                            </ul>
-                        </div>
+    return (            
+        <section>
+        <div className="admin-dashboard"> {/* Adjusted marginTop to account for navbar */}
+
+            <div className="sidebar">
+                <div className="admin-container">
+                </div>
+                <div class="wrapper">
+                    <div class="side">
+                        <div>
+                        <EstablishmentReserve/>
+                        
                     </div>
-                    <nav className="navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: '#132B4B', position: "fixed", width: "100%", height: '15%', marginTop: '-8%' }}>
-                        <div className="container">
-                            <Link className="navbar-brand" to="/Dashboard" style={{ fontSize: "25px" }}></Link>
-                        </div>
-                    </nav>
+                    
                 </div>
 
-                <MDBContainer className="py-5" style={{ backgroundColor: "#f9f9f9", marginTop: '10vh' }}>
+                </div>
+        </div>
+
+                <MDBContainer className="py-5" style={{  marginTop: '10vh' }}>
                     <MDBRow className="justify-content-center">
                         <MDBCol md="8">
-                            <MDBCard className="shadow">
+                        <MDBCard className="shadow custom-card">
                                 <MDBCardBody>
+                                <h1 className="title">Establishment Info</h1> 
+                                <div>&nbsp;</div>
+                                <div>&nbsp;</div>
+
+
+
                                     <div className="text-center mb-4">
                                         <MDBCardImage src={profileImageUrl || "defaultt.png"} alt="Profile" className="img-thumbnail" style={{ width: "150px", borderRadius: "50%" }} />
                                     </div>
@@ -229,16 +225,29 @@ export default function EditButton() {
                                         </>
                                     ) : (
                                         <>
-                                            <h4 className="card-title mb-4">{name}</h4>
-                                            <p className="card-text mb-1">Location: {address}</p>
-                                            <p className="card-text mb-1">Email: {companyEmail}</p>
-                                            <p className="card-text mb-1">Parking Fee: {parkingPay}</p>
-                                            <p className="card-text mb-1">Contact Number: {companyContact}</p>
-                                            <p className="card-text mb-1">Open Time: {openTime || "Not Set"}</p>
-                                            <p className="card-text mb-1">Close Time: {closeTime || "Not Set"}</p>
-                                            <MDBBtn color="dark" className="mb-3" onClick={toggleEditing} style={buttonStyles}>
-                                                Edit Profile
-                                            </MDBBtn>
+                                            <h1 className="card-title mb-4" style={{ fontSize: "1.7rem" }}>{name}</h1>
+                                            <p className="card-text mb-1"><strong>Location:</strong> {address}</p>
+                                            <p className="card-text mb-1"><strong>Email:</strong> {companyEmail}</p>
+                                            <p className="card-text mb-1"><strong>Parking Fee:</strong> {parkingPay}</p>
+                                            <p className="card-text mb-1"><strong>Contact Number:</strong> {companyContact}</p>
+                                            <p className="card-text mb-1"><strong>Open Time:</strong> {openTime || "Not Set"}</p>
+                                            <p className="card-text mb-1"><strong>Close Time:</strong> {closeTime || "Not Set"}</p>
+                                            <div>&nbsp;</div>
+                                            <div>&nbsp;</div>
+                                            <MDBBtn
+                                            className="mb-3"
+                                            onClick={toggleEditing}
+                                            style={{
+                                                backgroundColor: '#003851',
+                                                color: 'white',
+                                                border: 'none',
+                                                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.4)',
+                                                borderRadius: '50px' // Rounded edges to match your previous example
+                                            }}
+                                        >
+                                            Edit Profile
+                                        </MDBBtn>
+
                                         </>
                                     )}
                                 </MDBCardBody>

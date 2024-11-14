@@ -10,6 +10,7 @@ import UserContext from "../UserContext";
 import { MDBCol, MDBContainer, MDBRow, MDBCard, MDBCardText, MDBCardBody, MDBCardImage, MDBListGroup, MDBListGroupItem, MDBBtn, MDBTypography } from "mdb-react-ui-kit";
 import './dashboardCard.css'
 import './AgentRegistration.css'
+import EstablishmentReserve from "./establishmentReserve";
 
 function CreateAccount() {
     const location = useLocation();
@@ -182,25 +183,13 @@ function CreateAccount() {
             <div class="wrapper">
                 <div class="side">
                     <div>
-                    {profileImageUrl ? <MDBCardImage src={profileImageUrl} alt="Operator Profile Logo" className="rounded-circle" style={{ width: "70px"}} fluid /> : <MDBCardImage src="default_placeholder.jpg" alt="Default Profile Logo" className="rounded-circle" style={{ width: "70px", marginTop: '-6vh' }} fluid />}
-                                <p style={{ fontFamily: "Georgina", fontSize: "20px", border: "white", fontWeight: "bold", colo: 'white'}}> {managementName}</p>
-                                </div>            
-                    <h2>Menu</h2>
-                    <ul>
-                        <li><a href="Dashboard"><i class="fas fa-home"></i>Home</a></li>
-                        <li><a href='AgentRegistration'><i class="fas fa-user"></i>Operator Registration</a></li>
-                        <li><a href='Tracks'><i class="fas fa-project-diagram"></i>Management Details</a></li>
-                        <li><a href="Profiles"><i class="fas fa-blog"></i>Profile</a></li>
-                        <li><a href="Feedback"><i class="fas fa-blog"></i>Feedback</a></li>
-                        <li><a href="/"><i className="fas fa-sign-out-alt" style={{ color: 'red' }}></i>Logout</a></li>
-                    </ul>
-
+                   <EstablishmentReserve/>
                     
                 </div>
                 
             </div>
             </div>
-
+</div>
       <MDBContainer>
         <MDBRow>
           {/* <MDBCol className="background-container d-flex align-items-center justify-content-center" style={{marginTop: '10vh', margin: 'auto', wi}}>
@@ -215,9 +204,15 @@ function CreateAccount() {
             </div>
           </MDBCol> */}
           <MDBCol className="d-flex align-items-center justify-content-center form-column">
-            <MDBCard className="form-container" style={{  height: '85vh', margin: 'auto', borderRadius: '10px'}}>
+            <MDBCard className="form-container" style={{
+              height: '85vh',
+              margin: 'auto',
+              borderRadius: '50px',
+              backgroundColor: '#eceef6',  // Light background color
+              boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.4)'  // More pronounced shadow
+            }}>
               <MDBCardBody className="card-body">
-                <h4 className="text-center mb-4" style={{ fontWeight: "bold" }}>Create Operator Account</h4>
+                <h2 className="text-center mb-4" style={{ fontWeight: "bold" }}>Create Operator Account</h2>
                 <form onSubmit={handleSubmit} className="form-body">
                   <div className="input-group">
                     <input type="text" placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />

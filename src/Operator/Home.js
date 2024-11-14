@@ -15,6 +15,8 @@ import Sidebar from './Sidebar';
 
 function Home() {
   const { user, setUser } = useContext(UserContext);
+  const [reservationCount, setReservationCount] = useState(0);
+  const [walkInCount, setWalkInCount] = useState(0);
   const [agentFirst, setAgentFirstName] = useState(user.firstName || "");
   const [agentLastName, setAgentLastName] = useState(user.lastName || "");
   const agentFullName = `${agentFirst} ${agentLastName}`;
@@ -37,7 +39,29 @@ function Home() {
   const [reservedSlots, setReservedSlots] = useState(0); // Define reservedSlots state
   const [reservedSpaces, setReservedSpaces] = useState(0);
 
+  const chartContainerStyle = {
+    display: "flex",          // Display items in a row
+    justifyContent: "center",  // Center align the charts
+    padding: "20px",           // Optional padding around the container
+    margin: "20px",  // Add this line to increase spacing around each chart card
+
+  };
+  
+  const chartCardStyle = {
+    backgroundColor: "#f8f9fa", // Light background similar to the example
+    borderRadius: "15px",       // Rounded corners
+    boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.4)", // Soft shadow
+    padding: "20px",            // Padding for spacing
+    width: "100%",              // Set width to take available space
+    maxWidth: "470px",          // Limit max width for each chart card
+    textAlign: "center",        // Center text alignment
+    margin: "10px",  // Add this line to increase spacing around each chart card
+
+  };
+  
   const styles = {
+   
+
     welcomeMessage: {
       position: "absolute",
       top: "10px",
@@ -55,6 +79,58 @@ function Home() {
   const handleNavigation = (cardType) => {
     navigate('/OperatorDashboard', { state: { activeCard: cardType } });
   };
+
+  useEffect(() => {
+    const fetchParkingData = async () => {
+      try {
+        const managementName = user.managementName;
+  
+        // Query for all occupied slots
+        const occupiedSlotsQuery = query(
+          collection(db, `slot/${managementName}/slotData`),
+          where("status", "==", "Occupied")
+        );
+        const occupiedSnapshot = await getDocs(occupiedSlotsQuery);
+  
+        // Separate reservations and walk-ins based on the presence of the reserveStatus field
+        let reservationCount = 0;
+        let walkInCount = 0;
+  
+        occupiedSnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (data.reserveStatus) {
+            // Entry has reserveStatus; it's a reservation
+            reservationCount += 1;
+          } else {
+            // No reserveStatus field; consider it a walk-in
+            walkInCount += 1;
+          }
+        });
+  
+        setReservationCount(reservationCount);
+        setWalkInCount(walkInCount);
+  
+        // Update occupancy data
+        setOccupiedSlots(reservationCount + walkInCount);
+        setAvailableSlots(totalSlots - (reservationCount + walkInCount));
+      } catch (error) {
+        console.error("Error fetching parking data:", error);
+      }
+    };
+  
+    if (user && user.managementName) {
+      fetchParkingData();
+    }
+  }, [user]);
+  
+
+  // Data for the Doughnut Chart
+  const total = reservationCount + walkInCount;
+  const doughnutData = [
+    { name: "Reserved", value: reservationCount },
+    { name: "Walk-ins", value: walkInCount },
+  ];
+
   useEffect(() => {
     const fetchEstablishmentData = async () => {
       try {
@@ -138,7 +214,6 @@ function Home() {
     fetchParkingLogs();
   }, [user, db, parkingPay]);
 
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
   const handleCardClick = (cardType) => {
     if (cardType === 'occupied') {
       navigate('/OperatorDashboard', { state: { activeCard: 'occupied' } });
@@ -146,6 +221,18 @@ function Home() {
       navigate('/OperatorDashboard', { state: { activeCard: 'reserve' } });
     }
   };
+
+  const occupancyRate = totalSlots > 0 ? ((occupiedSlots / totalSlots) * 100).toFixed(2) : 0;
+ // Data for the Pie Chart
+ 
+  const pieData = [
+  { name: "Occupied", value: occupiedSlots },
+  { name: "Available", value: availableSlots }
+];
+
+  // Colors for the Pie Chart
+  const OCCUPANCY_COLORS = ["#ff0000", "#008000"];
+
   return (
     <div className="gradient-custom-2" style={{ backgroundColor: "white" }}>
         <div className="container">
@@ -157,11 +244,13 @@ function Home() {
           <MDBCol lg="6">
             <OperatorReserve />
           </MDBCol>
+          
           <MDBCol lg="11">
           <div className="summary-cards">
               {/* Merge your existing cards */}
               <Tab.Container id="parking-tab" defaultActiveKey="total">
            <Row className="mb-22">
+            
   <Col>
     <Nav variant="pills" className="nav-tabs justify-content-start custom-nav-tabs">
       <Nav.Item>
@@ -181,12 +270,14 @@ function Home() {
         </Nav.Link>
       </Nav.Item>
       <Nav.Item>
+                     
         <Nav.Link
           eventKey="fee"
           className="custom-tab"
         >
           Parking Fee
         </Nav.Link>
+        
       </Nav.Item>
       <Nav.Item className="dropdown">
                         <a className="nav-link custom-tab dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
@@ -228,8 +319,9 @@ function Home() {
           <h4>Total Parking Spaces</h4>
           <p>{totalSlots} Total Parking Spaces</p>
         </div>
+        
       </Tab.Pane>
-
+    
       <Tab.Pane eventKey="available">
         <div style={{ padding: "20px", textAlign: "center" }}>
           <img
@@ -274,42 +366,63 @@ function Home() {
           </MDBCol>
         </MDBRow>
       </MDBContainer>
-      <hr className="divider" />
-      <MDBContainer className="py-0">
-        <MDBRow>
-          <MDBCol lg="6">
-            <div style={{ margin: "20px 0", textAlign: "center", fontSize: "18px", fontWeight: "bold" }}>
-              Floor Usage
-            </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={floorUsage} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
-                  {floorUsage.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
+      
+      <hr/>
+
+      <div style={chartContainerStyle}>
+    <div style={chartCardStyle}>
+        <h5>Current Occupancy Rate</h5>
+        <h6>{occupancyRate}%</h6>
+        <ResponsiveContainer width={420} height={300}>  
+            <PieChart>
+                <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label
+                >
+                    {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={OCCUPANCY_COLORS[index % OCCUPANCY_COLORS.length]} />
+                    ))}
                 </Pie>
                 <Tooltip />
                 <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </MDBCol>
-          <MDBCol lg="6">
-            <div style={{ margin: "20px 0", textAlign: "center", fontSize: "18px", fontWeight: "bold" }}>
-              Hourly Revenue
-            </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={hourlyRevenueData}>
-                <XAxis dataKey="hour" />
-                <YAxis type="number" allowDataOverflow={true} tickCount={6} domain={[0, "dataMax"]} interval={0} tickFormatter={(tick) => tick.toFixed(0)} />
-                <CartesianGrid strokeDasharray="3 3" />
-                <Tooltip />
-                <Line type="monotone" dataKey="revenue" stroke="#8884d8" activeDot={{ r: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </MDBCol>
-        </MDBRow>
-      </MDBContainer>
+            </PieChart>
+        </ResponsiveContainer>
     </div>
+
+    <div style={chartCardStyle}>
+        <h5>Reservation vs. Walk-In</h5>
+        <ResponsiveContainer width={430} height={300}>  
+            <PieChart>
+                <Pie
+                    data={doughnutData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    fill="#8884d8"
+                    label={({ name, value }) => `${name}: ${((value / total) * 100).toFixed(1)}%`}
+                >
+                    {doughnutData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={OCCUPANCY_COLORS[index % OCCUPANCY_COLORS.length]} />
+                    ))}
+                </Pie>
+                <Tooltip formatter={(value) => `${value} (${((value / total) * 100).toFixed(1)}%)`} />
+                <Legend />
+            </PieChart>
+        </ResponsiveContainer>
+    </div>
+</div>
+
+
+    </div>
+    
   );
 }
 

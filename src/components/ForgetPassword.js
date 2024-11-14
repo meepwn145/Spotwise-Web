@@ -71,7 +71,7 @@ const handleLogin = () => {
     flexDirection: 'column', 
     alignItems: 'center',
     minHeight: '100vh',
-    backgroundColor: '#3b89ac',
+    backgroundColor: '#E5E4E2',
   };
 
   const formContainerStyle = {
@@ -87,7 +87,7 @@ const handleLogin = () => {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '20px',
-    backgroundColor: 'black',
+    backgroundColor: '#132B4B',
     color: 'white',
     width: '100%',
     marginBottom: '150px'
@@ -100,7 +100,7 @@ const handleLogin = () => {
   return (
     <div style={containerStyle}>
       <div style={navbarStyle}>
-        <div style={logoStyle} onClick={handleLogin}>SpotWise Parking Management</div>
+        <div style={logoStyle} onClick={handleLogin}>SpotWise</div>
       </div>
       <div style={formContainerStyle}>
       <h2 style={{textAlign:'center', marginBottom:'30px', fontSize:'20px'}}>Forgot Password</h2>

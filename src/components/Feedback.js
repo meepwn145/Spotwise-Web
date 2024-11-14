@@ -8,6 +8,8 @@ import { auth, db } from "../config/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, deleteDoc } from "firebase/firestore";
 import Navigation from "./navigation.js";
+import EstablishmentReserve from "./establishmentReserve";
+
 
 const FeedbackPage = () => {
     const [feedbackList, setFeedbackList] = useState([]);
@@ -173,39 +175,22 @@ const FeedbackPage = () => {
     };
 
     return (
-        <section style={{ backgroundColor: "white", minHeight: "100vh" }}>
-   
-    <div className="admin-dashboard"> {/* Adjusted marginTop to account for navbar */}
+         
+        <section>
+
+ <div className="admin-dashboard"> {/* Adjusted marginTop to account for navbar */}
         <div className="sidebar">
             <div className="admin-container">
             </div>
             <div class="wrapper">
                 <div class="side">
                     <div>
-                              
-                    {profileImageUrl ? <MDBCardImage src={profileImageUrl} alt="Operator Profile Logo" className="rounded-circle" style={{ width: "70px"}} fluid /> : <MDBCardImage src="default_placeholder.jpg" alt="Default Profile Logo" className="rounded-circle" style={{ width: "70px", marginTop: '-6vh' }} fluid />}
-                                <p style={{ fontFamily: "Georgina", fontSize: "20px", border: "white", fontWeight: "bold", colo: 'white'}}>{managementName}</p>
-                                </div>            
-                    <h2>Menu</h2>
-                    <ul>
-                        <li><a href="Dashboard"><i class="fas fa-home"></i>Home</a></li>
-                        <li><a href='AgentRegistration'><i class="fas fa-user"></i>Account Management</a></li>
-                        <li><a href='Tracks'><i class="fas fa-project-diagram"></i>Operator Registration</a></li>
-                        <li><a href="Profiles"><i class="fas fa-blog"></i>Profile</a></li>
-                        <li><a href="Feedback"><i class="fas fa-blog"></i>Feedback</a></li>
-                        <li><a href="/"><i className="fas fa-sign-out-alt" style={{ color: 'red' }}></i>Logout</a></li>
-                    </ul>
-
+                   <EstablishmentReserve/>
                     
                 </div>
                 
             </div>
-            <nav className="navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: '#132B4B', position: "fixed", width: "500vh", marginLeft: '-150vh',height: '15%', marginTop: '-8%'}}>
-<div className="container">
-    <Link className="navbar-brand" to="/Dashboard" style={{ fontSize: "25px"}}>
-    </Link>
-</div>
-</nav>
+            </div>
 </div>
 <MDBContainer>
       <MDBRow className="mt-5">
@@ -216,7 +201,18 @@ const FeedbackPage = () => {
               <h1 className="text-center mb-5">Customer Feedback</h1>
               <div className="d-flex">
                 <div className="flex-fill" style={{ width: '60%' }}>
-                  <div className="bg-primary text-white p-3 mb-3">FEEDBACK LIST</div>
+                <div
+                    style={{
+                        backgroundColor: '#003851',
+                        color: 'white',
+                        padding: '1rem',
+                        marginBottom: '1rem',
+                        borderRadius: '8px' // Adjust the value as needed for the desired curve
+                    }}
+                >
+                    FEEDBACK LIST
+                </div>
+
                   <ul className="list-group mb-3">
                     {pageFeedbackList.map((feedback) => {
                       const isClicked = clickedFeedbackIds.includes(feedback.id);

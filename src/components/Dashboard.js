@@ -11,6 +11,8 @@ import UserContext from "../UserContext";
 import { auth, db } from "../config/firebase";
 import { getDocs, collection, query, where, doc, getDoc } from "firebase/firestore";
 import { logoutUser } from "./auth";
+import EstablishmentReserve from "./establishmentReserve";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 import "./sideNavigation.css"
 
@@ -35,11 +37,109 @@ const Establishment = () => {
     const [profileImageUrl, setProfileImageUrl] = useState("");
     const [parkingPay, setParkingPay] = useState(0);
     const [availableSlots, setAvailableSlots] = useState(0);
+    const [occupiedSlots, setOccupiedSlots] = useState(0);  // State to keep track of occupied slots
+    const [walkInCount, setWalkInCount] = useState(0);
+    const [reservationCount, setReservationCount] = useState(0);
+    const styles = {
+   
 
+        welcomeMessage: {
+          position: "absolute",
+          top: "10px",
+          right: "10px",
+          margin: "0",
+          color: "#fff",
+          fontFamily: "Rockwell, sans-serif",
+          textShadow: "2px 2px 4px rgba(0, 0, 0, 0.5)",
+        },
+        sectionHeader: {
+            fontWeight: "bold", // Make text bold
+            fontSize: "16px",   // Optional: adjust size if needed
+            color: "#333",      // Optional: set color if needed
+            display: "flex",
+            alignItems: "center",
+        },
+        icon: {
+          marginRight: "5px",
+        },
+      };
     const totalRevenues = totalUsers * parkingPay;
     const updateInterval = 1000;
 
+    const chartContainerStyle = {
+        display: "flex",          // Display items in a row
+        justifyContent: "center",  // Center align the charts
+        padding: "20px",           // Optional padding around the container
+        margin: "20px",  // Add this line to increase spacing around each chart card
+    
+      };
+      
+      const chartCardStyle = {
+        backgroundColor: "#f8f9fa",
+        borderRadius: "15px",
+        boxShadow: "0px 4px 8px rgba(0, 0, 0, 0.4)",
+        padding: "20px",
+        width: "100%",
+        maxWidth: "500px",  // Increase the max width to make the chart wider
+        textAlign: "center",
+        margin: "10px",
+    };
+    
     const userDocRef = auth.currentUser ? doc(db, "establishments", auth.currentUser.uid) : null;
+    useEffect(() => {
+        const fetchParkingData = async () => {
+          try {
+            const managementName = user.managementName;
+      
+            // Query for all occupied slots
+            const occupiedSlotsQuery = query(
+              collection(db, `slot/${managementName}/slotData`),
+              where("status", "==", "Occupied")
+            );
+            const occupiedSnapshot = await getDocs(occupiedSlotsQuery);
+      
+            // Separate reservations and walk-ins based on the presence of the reserveStatus field
+            let reservationCount = 0;
+            let walkInCount = 0;
+      
+            occupiedSnapshot.forEach((doc) => {
+              const data = doc.data();
+              if (data.reserveStatus) {
+                // Entry has reserveStatus; it's a reservation
+                reservationCount += 1;
+              } else {
+                // No reserveStatus field; consider it a walk-in
+                walkInCount += 1;
+              }
+            });
+      
+            setReservationCount(reservationCount);
+            setWalkInCount(walkInCount);
+      
+            // Update occupancy data
+            setOccupiedSlots(reservationCount + walkInCount);
+            setAvailableSlots(totalSlots - (reservationCount + walkInCount));
+          } catch (error) {
+            console.error("Error fetching parking data:", error);
+          }
+        };
+      
+        if (user && user.managementName) {
+          fetchParkingData();
+        }
+      }, [user]);
+      
+    
+      // Data for the Doughnut Chart
+      const total = reservationCount + walkInCount;
+const doughnutData = total > 0
+    ? [
+        { name: "Reserved", value: reservationCount },
+        { name: "Walk-ins", value: walkInCount }
+      ]
+    : [
+        { name: "No Data", value: 1 }
+      ];
 
     useEffect(() => {
         if (userDocRef) {
@@ -224,14 +324,12 @@ const Establishment = () => {
             },
             {
                 title: 'Occupied Spaces',
-                value: `${occupiedSpaces} Occupied Spaces`,
                 imgSrc: 'occupied.png',
                 cardType: 'occupied',
                 clickable: true
             },
             {
-                title: 'Reserve Spaces',
-                value: `${reservedSpaces} Reserved Spaces`,
+                title: 'Reserved Spaces',
                 imgSrc: 'reservedP.png',
                 cardType: 'reserve',
                 clickable: true
@@ -321,73 +419,133 @@ const Establishment = () => {
                 return null;
         }
     };
+    const occupancyRate = totalSlots > 0 ? ((occupiedSlots / totalSlots) * 100).toFixed(2) : 0;
+ // Data for the Pie Chart
+ 
+  const pieData = [
+  { name: "Occupied", value: occupiedSlots },
+  { name: "Available", value: availableSlots }
+];
 
-    const styles = {
-      
-    };
+  // Colors for the Pie Chart
+  const OCCUPANCY_COLORS = ["#ff0000", "#008000"];
+    
 
     return (
         <section>
             <div className="admin-dashboard">
                 <div className="sidebar">
-                    <div className="admin-container">
+                <div className="admin-container">
                     </div>
                     <div className="wrapper">
                         <div className="side">
-                            <div>
-                                {profileImageUrl ? <MDBCardImage src={profileImageUrl} alt="Operator Profile Logo" className="rounded-circle" style={{ width: "70px"}} fluid /> : <MDBCardImage src="default_placeholder.jpg" alt="Default Profile Logo" className="rounded-circle" style={{ width: "70px", marginTop: '-6vh' }} fluid />}
-                                <p style={{ fontFamily: "Georgina", fontSize: "20px", border: "white", fontWeight: "bold", colo: 'white'}}>{managementName}</p>
-                            </div>
-                            <h2>Menu</h2>
-                            <ul>
-                                <li><a href="Dashboard"><i className="fas fa-home"></i>Home</a></li>
-                                <li><a href='AgentRegistration'><i className="fas fa-user"></i>Operator Registration</a></li>
-                                <li><a href='Tracks'><i className="fas fa-project-diagram"></i>Management Details</a></li>
-                                <li><a href="Profiles"><i className="fas fa-blog"></i>Profile</a></li>
-                                <li><a href="Feedback"><i className="fas fa-blog"></i>Feedback</a></li>
-                                <li><a onClick={handleLogOut}><i className="fas fa-sign-out-alt" style={{ color: 'red' }}></i>Logout</a></li>
-                            </ul>
+                            
+                            <EstablishmentReserve />
+
                         </div>
                     </div>
-                    <nav className="navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: '#132B4B', position: "fixed", width: "500vh", marginLeft: '-150vh',height: '15%', marginTop: '-8%'}}>
-                        <div className="container">
-                            <Link className="navbar-brand" to="/Dashboard" style={{ fontSize: "25px"}}>
-                            </Link>
-                        </div>
-                    </nav>
+                    <div className="container">
+
+            </div>
                 </div>
                 <div className="gradient-custom-2" style={{ backgroundColor: 'white' }}>
-                    <nav className="navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: "#132B4B" }}>
                         <div className="container">
-                            <a className="navbar-brand" style={{ padding: 20 }}>
-                            </a>
+                        
                         </div>
-                    </nav>
+                        
                     <MDBContainer className="py-4">
+                        
                         <MDBRow>
-                            <MDBCol lg="4">
+                            <MDBCol lg="2">
                             </MDBCol>
                             <MDBCol lg="8">
+                                
                                 <div className="summary-cards">
-                                    {summaryCardsData.map(card => (
-                                        <div key={card.title} className={`card card-${card.cardType}`}
-                                            onClick={() => card.clickable ? handleCardClick(card.cardType) : null}
-                                            style={card.clickable ? (activeCard === card.cardType ? { ...styles.card, ...styles.activeCard } : styles.card) : styles.nonClickableCard}>
-                                            <img src={card.imgSrc} alt={card.title} className="card-image" />
-                                            <div className="card-content">
-                                                <div className="card-title">{card.title}</div>
-                                                <div className="card-value">{card.value}</div>
-                                            </div>
+                                {summaryCardsData.map(card => (
+                                    <div
+                                        key={card.title}
+                                        className={`card ${card.clickable ? 'card-clickable' : 'card-non-clickable'}`}
+                                        onClick={() => card.clickable ? handleCardClick(card.cardType) : null}
+                                        style={card.clickable ? { ...styles.card, ...styles.activeCard } : styles.nonClickableCard}
+                                    >
+                                        <img src={card.imgSrc} alt={card.title} className="card-image" />
+                                        <div className="card-content">
+                                            <div className="card-title">{card.title}</div>
+                                            <div className="card-value">{card.value}</div>
                                         </div>
-                                    ))}
+                                        {card.clickable && <span className="click-indicator">Click for details</span>}
+                                    </div>
+                                ))}
+
                                 </div>
-                                <hr className="divider" />
+                                
                                 {renderFormBasedOnCardType()}
+                       
+    
                             </MDBCol>
+                            
                         </MDBRow>
-                    </MDBContainer>
+                        
+                    </MDBContainer> 
+                    <hr className="divider" />
+                    <div style={chartContainerStyle}>
+                                    
+                                    <div style={chartCardStyle}>
+                                        <h5>Current Occupancy Rate</h5>
+                                        <h6>{occupancyRate}%</h6>
+                                        <ResponsiveContainer width={450} height={300}>  
+                                            <PieChart>
+                                                <Pie
+                                                    data={pieData}
+                                                    dataKey="value"
+                                                    nameKey="name"
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    outerRadius={100}
+                                                    label
+                                                >
+                                                    {pieData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={OCCUPANCY_COLORS[index % OCCUPANCY_COLORS.length]} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip />
+                                                <Legend />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                
+                                    <div style={chartCardStyle}>
+                                        <h5>Reservation vs. Walk-In</h5>
+                                        <ResponsiveContainer width={450} height={350}>  
+                                            <PieChart>
+                                                <Pie
+                                                    data={doughnutData}
+                                                    dataKey="value"
+                                                    nameKey="name"
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={60}
+                                                    outerRadius={90}
+                                                    fill="#8884d8"
+                                                    label={({ name, value }) => `${name}: ${((value / total) * 100).toFixed(1)}%`}
+                                                >
+                                                    {doughnutData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={OCCUPANCY_COLORS[index % OCCUPANCY_COLORS.length]} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip formatter={(value) => `${value} (${((value / total) * 100).toFixed(1)}%)`} />
+                                                <Legend />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                                
+                    
+
+                   
                 </div>
             </div>
+            
         </section>
     );
 };

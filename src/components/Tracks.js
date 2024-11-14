@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Container, Table, Button, Row, Col } from "react-bootstrap";
 import { db, auth } from "../config/firebase";
-import { collection, onSnapshot, Timestamp, where, getDocs, query } from "firebase/firestore";
+import { collection, onSnapshot, Timestamp, where, getDocs, deleteDoc, query } from "firebase/firestore";
 import { DropdownButton, Dropdown } from "react-bootstrap";
 import { FaUserCircle } from "react-icons/fa";
 import { useNavigate, Link } from "react-router-dom";
@@ -10,6 +10,7 @@ import { MDBCol, MDBContainer, MDBRow, MDBCard, MDBCardText, MDBCardBody, MDBCar
 import UserContext from "../UserContext";
 import { MDBBtn, MDBTable } from 'mdb-react-ui-kit';
 import {  doc, getDoc } from "firebase/firestore";
+import EstablishmentReserve from "./establishmentReserve";
 const listItemStyle = {
     display: "flex",
     justifyContent: "space-between",
@@ -38,6 +39,11 @@ const App = () => {
     const [revenue, setRevenue] = useState([]);
     const [loading, setLoading] = useState(true);
     const [slotData, setSlotData] = useState([]);
+    const [showOperatorManagement, setShowOperatorManagement] = useState(true);
+    const [operators, setOperators] = useState([]);
+    const handleShowOperatorManagement = () => {
+        setShowOperatorManagement(true);
+    };
     const userDocRef = auth.currentUser ? doc(db, "establishments", auth.currentUser.uid) : null;
     useEffect(() => {
       if (userDocRef) {
@@ -54,6 +60,38 @@ const App = () => {
           fetchImageUrl().catch(console.error);
       }
   }, [userDocRef]);
+  
+  useEffect(() => {
+    // Fetch only operators associated with the logged-in establishment
+    const fetchOperators = async () => {
+        if (user && user.managementName) { // Ensure the establishment name is available
+            const agentsCollectionRef = collection(db, "agents");
+            const q = query(agentsCollectionRef, where("managementName", "==", user.managementName)); // Filter by establishment
+            const querySnapshot = await getDocs(q);
+            const agentsData = querySnapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            setOperators(agentsData);
+        }
+    };
+    fetchOperators();
+}, [user]); // Run this effect whenever the user context changes
+    // Function to remove an operator with a confirmation prompt
+    const handleRemoveOperator = async (operatorId) => {
+        const confirmDelete = window.confirm("Are you sure you want to remove this operator?");
+        if (confirmDelete) {
+            try {
+                await deleteDoc(doc(db, "agents", operatorId));
+                // Update the operators list after deletion
+                setOperators((prevOperators) => prevOperators.filter((operator) => operator.id !== operatorId));
+                alert("Operator removed successfully");
+            } catch (error) {
+                console.error("Error removing operator: ", error);
+                alert("Failed to remove operator");
+            }
+        }
+    };
     const handleViewProfile = () => {
         navigate("/Profiles");
     };
@@ -69,7 +107,7 @@ const App = () => {
         navigate("/AgentSchedule");
     };
 
-    const handleRevenues = () => {
+    const handleRevenues = () => {  
         navigate("/Tracks");
     };
 
@@ -250,138 +288,72 @@ const App = () => {
         <section>
             <div className="admin-dashboard">
                 <div className="sidebar">
-                    <div className="admin-container"></div>
-                    <div className="wrapper">
-                        <div className="side">
-                            <div>
-                                {profileImageUrl ? <MDBCardImage src={profileImageUrl} alt="Operator Profile Logo" className="rounded-circle" style={{ width: "70px"}} fluid /> : <MDBCardImage src="default_placeholder.jpg" alt="Default Profile Logo" className="rounded-circle" style={{ width: "70px", marginTop: '-6vh' }} fluid />}
-                                <p style={{ fontFamily: "Georgina", fontSize: "20px", border: "white", fontWeight: "bold", colo: 'white'}}>{managementName}</p>
-                            </div>            
-                            <h2>Menu</h2>
-                            <ul>
-                                <li><a href="Dashboard"><i class="fas fa-home"></i>Home</a></li>
-                                <li><a href='AgentRegistration'><i class="fas fa-user"></i>Operator Registration</a></li>
-                                <li><a href='Tracks'><i class="fas fa-project-diagram"></i>Management Details</a></li>
-                                <li><a href="Profiles"><i class="fas fa-blog"></i>Profile</a></li>
-                                <li><a href="Feedback"><i class="fas fa-blog"></i>Feedback</a></li>
-                                <li><a href="/"><i className="fas fa-sign-out-alt" style={{ color: 'red' }}></i>Logout</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                    <nav className="navbar navbar-expand-lg navbar-dark" style={{ backgroundColor: '#132B4B', position: "fixed", width: "500vh", marginLeft: '-150vh',height: '15%', marginTop: '-8%'}}>
-                        <div className="container">
-                            <Link className="navbar-brand" to="/Dashboard" style={{ fontSize: "25px"}}></Link>
-                        </div>
-                    </nav>
+                    <EstablishmentReserve onOperatorManagementClick={handleShowOperatorManagement} />
                 </div>
-                <MDBContainer style={{marginTop: '15vh'}}>
-                    <h2 style={{fontSize: 50, margin: 'auto'}}>Management Details Page</h2>
-                    <hr className="divider" style={{Color: '#132B4B'}} />
-                    <MDBRow className="mb-4 justify-content-center">
-                        {/* <MDBCol xs={12} md={4} className="mb-4">
-                            <div className="text-center py-4">
-                                <img src="coins.png" alt="Revenue" className="img-fluid mb-3" style={{ height: '90px', borderRadius: '8px' }} />
-                                <Button onClick={handleShowAccountingPage} variant="info" className="btn-block btn-lg" style={{ boxShadow: '0 4px 8px rgba(0,0,0,0.2)' }}>
-                                    Show Revenue
-                                </Button>
-                            </div>
-                        </MDBCol> */}
-                        <MDBCol xs={12} md={4} className="mb-4">
-                            <div className="text-center">
-                                <div className="text-center py-4">
-                                    <img src="customer.jpg" alt="Customers" className="img-fluid mb-3" style={{ height: '80px', marginRight:'20px'}} />
-                                    <Button onClick={handleShowCustomer} variant="info" className="btn-block btn-lg" style={{ boxShadow: '0 4px 8px rgba(0,0,0,0.2)' }}>
-                                        Show Customer Details
-                                    </Button>
-                                </div>
-                            </div>
-                        </MDBCol>
-                    </MDBRow>
-                    <hr className="divider" />
-                    {showAccountingPage && (
+
+                <Container style={{ marginTop: '15vh' }}>
+                    <h2 style={{ fontSize: 50, margin: 'auto' }}>Management Details Page</h2>
+                    <hr className="divider" style={{ color: '#132B4B' }} />
+                    <Button
+                    onClick={handleShowOperatorManagement}
+                    style={{
+                        backgroundColor: '#003851',
+                        color: 'white',
+                        border: 'none',
+                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+                        borderRadius: '50px',
+                        display: 'block', // Ensures it takes full width in its container
+                        margin: '0 auto', // Centers the button horizontally
+                    }}
+                    className="btn-lg"
+                >
+                    Operator Management
+                </Button>
+
+                    {showOperatorManagement && (
                         <div>
-                            <h3 className="text-center mb-4"><i className="fas fa-dollar-sign"></i> Revenue Details</h3>
-                            <Table striped bordered hover responsive className="text-center">
-                                <thead className="bg-dark text-white">
-                                    <tr>
-                                        <th>Customer Email</th>
-                                        <th>Date</th>
-                                        <th>Description</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {parkingLogs.map((log) => (
-                                        <tr key={log.id}>
-                                            <td>{log.name}</td>
-                                            <td>
-                                                <p className="text-success">Time in: {log.timeIn && new Date(log.timeIn.seconds * 1000).toLocaleString()}</p>
-                                                <p className="text-danger">Time out: {log.timeOut && new Date(log.timeOut.seconds * 1000).toLocaleString()}</p>
-                                            </td>
-                                            <td>{log.name} - {log.paymentStatus}</td>
-                                            <td>{log.user.status}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                        </div>
-                    )}
-                    {showCustomer && (
-                        <div>
-                            <h3 className="text-center mb-4"><i className="fas fa-users"></i> Customer Details</h3>
+                            <h3 className="text-center mb-4"><i className="fas fa-users"></i></h3>
+                            {operators.length === 0 ? (
+                                <p className="text-center">No operator registered</p> // Display message if no operators
+                            ) : (
                             <Table striped bordered hover responsive className="text-center">
                                 <thead className="bg-primary text-white">
                                     <tr>
-                                        <th>Name</th>
-                                        <th>Floor</th>
-                                        <th>Slot Number</th>
-                                        <th>Status</th>
-                                        <th>Time</th>
+                                        <th>Operator Name</th>
+                                        <th>Management Name</th>
+                                        <th>Contact Number</th>
+                                        <th>Role</th>
+                                        <th>Actions</th>
+
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {slotData.map((slot) => (
-                                        <tr key={slot.id}>
-                                         
-                                            <td>{slot.userDetails.name}</td>
-                                            <td>{slot.userDetails.floorTitle}</td>
-                                            <td>{slot.userDetails.slotId + 1}</td>
-                                            <td>{slot.status}</td>
-                                            <td>{formatDateAndTime(slot.userDetails.timestamp)}</td>
+                                    {operators.map((operator) => (
+                                        <tr key={operator.id}>
+                                            <td>{operator.firstName} {operator.lastName}</td>
+                                            <td>{operator.managementName}</td> 
+                                            <td>{operator.phoneNumber}</td>
+                                            <td>Parking Operator</td>
+                                            <td>
+                                                <Button
+                                                    variant="danger"
+                                                    onClick={() => handleRemoveOperator(operator.id)}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </Table>
+                                                        )}
+
                         </div>
                     )}
-                    {showSchedule && (
-                        <div>
-                            <h3 className="text-center mb-4"><i className="fas fa-calendar-alt"></i> Agent Schedule Details</h3>
-                            <Table striped bordered hover responsive className="text-center">
-                                <thead className="bg-success text-white">
-                                    <tr>
-                                        <th>Agent Name</th>
-                                        <th>Email Address</th>
-                                        <th>Time in</th>
-                                        <th>Time out</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {scheduleData.map((row) => (
-                                        <tr key={row.id}>
-                                            <td>{row.name}</td>
-                                            <td>{row.email}</td>
-                                            <td>{row.timeIn}</td>
-                                            <td>{row.timeOut}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                        </div>
-                    )}
-                </MDBContainer>
+                </Container>
             </div>
         </section>
     );
 };
+
 export default App;
