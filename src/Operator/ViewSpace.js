@@ -469,6 +469,11 @@ const ParkingSlot = () => {
 
   const [userDetails, setUserDetails] = useState({});
   const [userPlateNumber, setUserPlateNumber] = useState("");
+  // const [first, setfirst] = useState(second)
+
+  const handleOnChange = (input) => {
+    setUserPlateNumber(input);
+  };
 
   const handleAddToSlot = (carPlateNumber, slotIndex) => {
     const slot = slotSets[currentSetIndex].slots[slotIndex];
@@ -1047,6 +1052,7 @@ const ParkingSlot = () => {
                   slotOccupied={
                     slotSets[currentSetIndex].slots[selectedSlot].occupied
                   }
+                  handleOnChange={handleOnChange}
                   userDetails={userDetails}
                 />
               )}
