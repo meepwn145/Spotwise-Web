@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
-import {Modal, ModalFooter} from 'react-bootstrap';
+import React, { useState } from "react";
+import { Modal, ModalFooter } from "react-bootstrap";
 import "./space.css";
 
-const SearchForm = ({ onSearch, onSelectSlot, onExitSlot, selectedSlot, userDetails, onClose }) => {
+const SearchForm = ({
+  onSearch,
+  onSelectSlot,
+  onExitSlot,
+  selectedSlot,
+  userDetails,
+  onClose,
+  handleOnChange,
+}) => {
   const [searchInput, setSearchInput] = useState("");
 
   const handleSearch = (e) => {
@@ -21,7 +29,7 @@ const SearchForm = ({ onSearch, onSelectSlot, onExitSlot, selectedSlot, userDeta
   const handleExit = () => {
     onExitSlot(selectedSlot);
   };
-  
+
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showExitModal, setExitModal] = useState(false);
@@ -38,22 +46,23 @@ const SearchForm = ({ onSearch, onSelectSlot, onExitSlot, selectedSlot, userDeta
     setShowAssignModal(false);
   };
 
-
   return (
     <div>
       <form onSubmit={handleSearch}>
         <input
           type="text"
           value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
+          onChange={(e) => (
+            setSearchInput(e.target.value), handleOnChange(e.target.value)
+          )}
           placeholder="Search Car Plate Number"
-          style={{borderRadius:'5px'}}
-          className='search-bar'
+          style={{ borderRadius: "5px" }}
+          className="search-bar"
         />
         <button
           className="btn-custom-search"
           type="submit"
-          style={{ marginTop: "10px", marginLeft: "30px", borderRadius:'5px'}}
+          style={{ marginTop: "10px", marginLeft: "30px", borderRadius: "5px" }}
         >
           Search
         </button>
