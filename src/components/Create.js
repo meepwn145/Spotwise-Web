@@ -212,7 +212,7 @@ function Create() {
 		justifyContent: "space-between",
 		alignItems: "center",
 		padding: "20px",
-		backgroundColor: "#333",
+		backgroundColor: "#132B4B",
 		color: "white",
 		width: "100%",
 	};
@@ -247,7 +247,7 @@ function Create() {
 	return (
 		<div>
 			<div style={navbarStyle}>
-				<div style={logoStyle}>SpotWise Parking Management</div>
+				<div style={logoStyle}>SpotWise</div>
 			</div>
 			<div style={containerStyle}>
 				<div style={formContainerStyle}>

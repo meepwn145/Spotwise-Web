@@ -30,7 +30,6 @@ import { faBell } from "@fortawesome/free-solid-svg-icons";
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
 import MapComponent from "../components/Map";
-
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -57,7 +56,11 @@ const Reservation = () => {
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
     const [activeTab, setActiveTab] = useState("reservation");
-
+    const [mapModal, setMapModal] = useState({ show: false, data: null });
+    const [imageModal, setImageModal] = useState({ show: false, url: null });
+    const toggleMapModal = (data) => setMapModal({ show: !mapModal.show, data });
+    const toggleImageModal = (url) =>
+    setImageModal({ show: !imageModal.show, url });
     const filterByDate = (logEntry) => {
       if (startDate && endDate) {
           const reservationDate = new Date(logEntry.date);
@@ -80,86 +83,177 @@ const Reservation = () => {
     
         return () => unsubscribe();
       }, []);
-
+      const renderTableHeader = (columns) => (
+        <thead>
+          <tr>
+            {columns.map((col, index) => (
+              <th key={index}>{col}</th>
+            ))}
+          </tr>
+        </thead>
+      );
+    
+      const renderTableBody = (data, columns) => (
+        <tbody>
+          {data.map((item, index) => (
+            <tr key={index}>
+              {columns.map((col, colIndex) => (
+                <td key={colIndex}>{item[col]}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      );
       const renderTabContent = () => {
         switch (activeTab) {
-            case "reservation":
-                if (reservationRequests.length === 0) {
-                    return <p className="text-center mt-4">No pending Reservation.</p>;
-                }
-                return reservationRequests.map((request, index) => (
-                    <ReservationRequest key={index} request={request} index={index} />
-                ));
-            case "accepted":
-                return (
-                    <div>
-                        <h6 className="mt-3">Filter by Date</h6>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <div style={{ marginRight: '30px' }}>
-                                <label>Start Date:&nbsp;</label>
-                                <DatePicker
-                                    selected={startDate}
-                                    onChange={date => setStartDate(date)}
-                                    dateFormat="yyyy/MM/dd"
-                                    isClearable
-                                />
-                            </div>
-                            <div>
-                                <label>End Date:&nbsp;</label>
-                                <DatePicker
-                                    selected={endDate}
-                                    onChange={date => setEndDate(date)}
-                                    dateFormat="yyyy/MM/dd"
-                                    isClearable
-                                />
-                            </div>
-                        </div>
-                        {historyLog
-                            .filter((log) => log.status === "Accepted" && filterByDate(log))
-                            .map((log, index) => (
-                                <div className="alert alert-success mt-2" key={index}>
-                                    {log.name} - Accepted on {log.date}
-                                </div>
-                            ))}
-                    </div>
-                );
-            case "declined":
-                return (
-                    <div>
-                        <h6 className="mt-3">Filter by Date</h6>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                            <div style={{ marginRight: '30px' }}>
-                                <label>Start Date:&nbsp;</label>
-                                <DatePicker
-                                    selected={startDate}
-                                    onChange={date => setStartDate(date)}
-                                    dateFormat="yyyy/MM/dd"
-                                    isClearable
-                                />
-                            </div>
-                            <div>
-                                <label>End Date:&nbsp;</label>
-                                <DatePicker
-                                    selected={endDate}
-                                    onChange={date => setEndDate(date)}
-                                    dateFormat="yyyy/MM/dd"
-                                    isClearable
-                                />
-                            </div>
-                        </div>
-                        {historyLog
-                            .filter((log) => log.status === "Declined" && filterByDate(log))
-                            .map((log, index) => (
-                                <div className="alert alert-danger mt-2" key={index}>
-                                    {log.name} - Declined on {log.date}
-                                </div>
-                            ))}
-                    </div>
-                );
-            default:
-                return null;
+          case "reservation":
+            return reservationRequests.length === 0 ? (
+              <p className="text-center mt-4">No pending reservations.</p>
+            ) : (
+            <table class="table table-striped table-hover table-bordered">
+                {renderTableHeader([
+                  "Name",
+                  "Time of Request",
+                  "Plate Number",
+                  "Floor",
+                  "Slot Number",
+                  "Actions",
+                ])}
+                <tbody>
+                  {reservationRequests.map((request, index) => (
+                    <tr key={index}>
+                      <td>{request.userName || "N/A"}</td>
+                      <td>{request.timeOfRequest}</td>
+                      <td>{request.carPlateNumber || "N/A"}</td>
+                      <td>{request.floorTitle || "N/A"}</td>
+                      <td>{request.slotId + 1 || "N/A"}</td>
+                      <td>
+                        <Button
+                          variant="primary"
+                          className="me-2"
+                          size="sm"
+
+                          onClick={() => toggleMapModal(request)}
+                        >
+                          View Map
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          className="me-2"
+                          size="sm"
+
+                          onClick={() => toggleImageModal(request.imageUri)}
+                        >
+                          View Proof
+                        </Button>
+                        <Button
+                        variant="success"
+                        onClick={() => handleReservation(true, request, index)}
+                        className="me-2"
+                        size="sm"
+                      >
+                        Accept Reservation
+                      </Button>
+                      <Button
+                        variant="danger"
+                        className="me-2"
+
+                        onClick={() => handleReservation(false, request, index)}
+                        size="sm"
+                      >
+                        Decline Reservation
+                      </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            );
+          case "accepted":
+            const acceptedLogs = historyLog.filter(
+              (log) => log.status === "Accepted" && filterByDate(log)
+            );
+            return (
+              <>
+                <div className="d-flex justify-content-between mb-3">
+                  <div>
+                    <label>Start Date:&nbsp;</label>
+                    <DatePicker
+                      selected={startDate}
+                      onChange={(date) => setStartDate(date)}
+                      dateFormat="yyyy/MM/dd"
+                      isClearable
+                    />
+                  </div>
+                  <div>
+                    <label>End Date:&nbsp;</label>
+                    <DatePicker
+                      selected={endDate}
+                      onChange={(date) => setEndDate(date)}
+                      dateFormat="yyyy/MM/dd"
+                      isClearable
+                    />
+                  </div>
+                </div>
+                <table class="table table-striped table-hover table-bordered">
+                  {renderTableHeader(["Name", "Date", "Status"])}
+                  <tbody>
+                    {acceptedLogs.map((log, index) => (
+                      <tr key={index}>
+                        <td>{log.name}</td>
+                        <td>{log.date}</td>
+                        <td>{log.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            );
+          case "declined":
+            const declinedLogs = historyLog.filter(
+              (log) => log.status === "Declined" && filterByDate(log)
+            );
+            return (
+              <>
+                <div className="d-flex justify-content-between mb-3">
+                  <div>
+                    <label>Start Date:&nbsp;</label>
+                    <DatePicker
+                      selected={startDate}
+                      onChange={(date) => setStartDate(date)}
+                      dateFormat="yyyy/MM/dd"
+                      isClearable
+                    />
+                  </div>
+                  <div>
+                    <label>End Date:&nbsp;</label>
+                    <DatePicker
+                      selected={endDate}
+                      onChange={(date) => setEndDate(date)}
+                      dateFormat="yyyy/MM/dd"
+                      isClearable
+                    />
+                  </div>
+                </div>
+                <table class="table table-striped table-hover table-bordered">
+                  {renderTableHeader(["Name", "Date", "Status"])}
+                  <tbody>
+                    {declinedLogs.map((log, index) => (
+                      <tr key={index}>
+                        <td>{log.name}</td>
+                        <td>{log.date}</td>
+                        <td>{log.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            );
+          default:
+            return null;
         }
-    };
+      };
+    
     
     
     const fetchReservations = async (managementName) => {
@@ -516,50 +610,46 @@ const handleReservation = async (accepted, reservationRequest, index) => {
       
     return (
       <div className="reservation-request mb-4 border p-3 rounded bg-light" style={{maxWidth: '100%' }} key={request.plateNumber}>
-      {/* Headers */}
-      <div className="d-flex justify-content-between mb-2 text-muted">
-        <div className="p-2"><strong>Name</strong></div>
-        <div className="p-2"><strong>Time of Request</strong></div>
-        <div className="p-2"><strong>Plate Number</strong></div>
-        <div className="p-2"><strong>Floor</strong></div>
-        <div className="p-2"><strong>Slot Number</strong></div>
-      </div>
+     
     
       {/* Details Row */}
-      <div className="d-flex justify-content-between mb-2">
-        <div className="p-2">{request.userName}</div>
-        <div className="p-2">{request.timeOfRequest}</div>
-        <div className="p-2">{request.carPlateNumber}</div>
-        <div className="p-1">{request.floorTitle}</div>
-        <div className="p-2">{request.slotId + 1}</div>
+      <div className="d-flex align-items-center justify-content-between p-3 border rounded bg-white">
+      {/* Reservation Details */}
+      <div className="d-flex">
+        <div className="p-2"><strong>Name:</strong> {request.userName}</div>
+        <div className="p-2"><strong>Time of Request:</strong> {request.timeOfRequest}</div>
+        <div className="p-2"><strong>Plate Number:</strong> {request.carPlateNumber}</div>
+        <div className="p-2"><strong>Floor:</strong> {request.floorTitle}</div>
+        <div className="p-2"><strong>Slot Number:</strong> {request.slotId + 1}</div>
       </div>
-    
-      {/* Slot Number and Action Buttons Row */}
-      <div className="d-flex align-items-center">
-        <div className="ms-auto d-flex">
-          <Button variant="primary" onClick={toggleMapModal} className="me-4" size="sm">
+
+      {/* Action Buttons */}
+    <div
+      className="d-flex justify-content-end gap-2"
+      style={{ gap: "50px" }}
+    >
+    <Button variant="primary" onClick={toggleMapModal} className="me-4" size="sm">
             View Map
-          </Button>
-          <Button variant="secondary" onClick={openImageModal} className="me-4" size="sm">
-            View Proof of Payment
-          </Button>
-          <Button
-            variant="success"
-            onClick={() => handleReservation(true, request, index)}
-            className="me-4"
-            size="sm"
-          >
-            Accept Reservation
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => handleReservation(false, request, index)}
-            size="sm"
-          >
-            Decline Reservation
-          </Button>
-        </div>
-      </div>
+      </Button>
+      <Button variant="secondary" onClick={openImageModal} size="sm">
+        View Proof of Payment
+      </Button>
+      <Button
+        variant="success"
+        onClick={() => handleReservation(true, request, index)}
+        size="sm"
+      >
+        Accept Reservation
+      </Button>
+      <Button
+        variant="danger"
+        onClick={() => handleReservation(false, request, index)}
+        size="sm"
+      >
+        Decline Reservation
+      </Button>
+    </div>
+  </div>
     
       {/* Map Modal */}
       <Modal show={showMapModal} onHide={toggleMapModal} centered>
@@ -608,7 +698,9 @@ const handleReservation = async (accepted, reservationRequest, index) => {
       
 
   return (
+    
     <div>
+      
         <section
             style={{
                 backgroundSize: "cover",
@@ -617,8 +709,10 @@ const handleReservation = async (accepted, reservationRequest, index) => {
                 backgroundColor: "white",
             }}
         >
-            <div>
+
+
                 <div className="container d-flex justify-content-between">
+
                     <a className="navbar-brand" style={{ padding: 35 }}></a>
                     <div>
                         <button
@@ -634,13 +728,14 @@ const handleReservation = async (accepted, reservationRequest, index) => {
 
                 <MDBContainer className="py-6">
                     <MDBRow>
-                        <MDBCol lg="2">
-                            <OperatorReserve />
-                        </MDBCol>
-                        <MDBCol lg="10">
-                            <h3 className="text-center mb-4">Parking Reservation Management</h3>
-                            <div className="d-flex justify-content-center mb-3">
-                                <button
+                      
+                    <MDBCol lg="2">
+              <OperatorReserve />
+            </MDBCol>
+            <MDBCol lg="10">
+              <h3 className="text-center mb-4">Parking Reservation Management</h3>
+              <div className="d-flex justify-content-center mb-3">
+              <button
                                     className={`btn tab-button ${activeTab === "reservation" ? "active-reservation" : "inactive"}`}
                                     onClick={() => setActiveTab("reservation")}
                                 >
@@ -659,20 +754,60 @@ const handleReservation = async (accepted, reservationRequest, index) => {
                                     Show Declined
                                 </button>
                             </div>
-                            <MDBCard>
-                                <MDBCardBody>
-                                    <div>{renderTabContent()}</div>
-                                </MDBCardBody>
-                            </MDBCard>
-                        </MDBCol>
-                        <MDBCol lg="4">
-                            <HistoryLog historyLog={historyLog} />
-                        </MDBCol>
-                    </MDBRow>
-                </MDBContainer>
-            </div>
-        </section>
+              {renderTabContent()}
+            </MDBCol>
+          </MDBRow>
+        </MDBContainer>
+
+        {/* Map Modal */}
+        <Modal show={mapModal.show} onHide={() => toggleMapModal(null)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>Map</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {mapModal.data?.location && user.coordinates && (
+              <MapComponent
+                origin={mapModal.data.location}
+                destination={user.coordinates}
+              />
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => toggleMapModal(null)}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Image Modal */}
+        <Modal
+          show={imageModal.show}
+          onHide={() => toggleImageModal(null)}
+          centered
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Proof of Payment</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {imageModal.url ? (
+              <img
+                src={imageModal.url}
+                alt="Proof of Payment"
+                style={{ width: "100%", height: "auto" }}
+              />
+            ) : (
+              <p>Loading image...</p>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => toggleImageModal(null)}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      </section>
     </div>
-);
-                            };
+  );
+};
+
 export default Reservation;

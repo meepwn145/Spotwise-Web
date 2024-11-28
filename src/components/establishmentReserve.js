@@ -42,6 +42,15 @@ const EstablishmentReserve = () => {
         border: "none",
         boxShadow: "none",
     };
+    useEffect(() => {
+        if (user) {
+            setProfileImageUrl(user.profileImageUrl || "");
+            setName(user.managementName || "");
+            setAddress(user.companyAddress || "");
+            setCompanyContact(user.contact || "");
+            setCompanyEmail(user.email || "");
+        }
+    }, [user]);
     const toggleEditing = () => {
         setIsEditing(!isEditing);
     };
@@ -51,6 +60,26 @@ const EstablishmentReserve = () => {
         objectFit: "cover",
         borderRadius: "10px", // Set the desired border radius
     };
+     // Fetch user profile image
+     useEffect(() => {
+        const fetchProfileImage = async () => {
+            if (auth.currentUser) {
+                const userDocRef = doc(db, "agents", auth.currentUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+    
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    setProfileImageUrl(userData.profileImageUrl);
+                    console.log("Fetched Profile Image URL:", userData.profileImageUrl);
+                } else {
+                    console.log("No such document!");
+                }
+            }
+        };
+    
+        fetchProfileImage().catch(console.error);
+    }, []);
+    
     const updateUserData = async () => {
         try {
             if (auth.currentUser) {
@@ -154,11 +183,18 @@ const EstablishmentReserve = () => {
              <div className="admin-dashboard" style={{ position: 'fixed', left: 0, top: 0 }}>
             <div className="sidebar">
             <div className="sidebar-header" style={{ textAlign: 'center', color: 'white', padding: '20px' }}>
-    {profileImageUrl ? (
-        <MDBCardImage src={profileImageUrl} alt="Operator Profile Logo" className="rounded-circle" style={{ width: "70px", height: "70px" }} fluid />
-    ) : (
-        <MDBCardImage src="default_placeholder.jpg" alt="Default Profile Logo" className="rounded-circle" style={{ width: "70px", height: "70px" }} fluid />
-    )}
+            <img
+                src={profileImageUrl || "default_placeholder.jpg"} // Use placeholder if profileImageUrl is null or undefined
+                alt="Operator"
+                className="admin-pic"
+                style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    marginBottom: '15px',
+                }}
+                />
+
     <div style={{ marginTop: '10px', fontSize: '24px' }}>
         Welcome, {managementName || 'No name found'}
     </div>

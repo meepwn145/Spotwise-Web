@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
+import { Tabs, Tab } from 'react-bootstrap';
 import Table from 'react-bootstrap/Table';
 import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
@@ -27,6 +28,7 @@ import {
 
 function OperatorDashboard() {
   const { user } = useContext(UserContext);
+  const [activeTab, setActiveTab] = useState('occupied'); // Default to "Occupied Spaces"
   const [agentFirst, setAgentFirstName] = useState(user.firstName || "");
   const [agentLastName, setAgentLastName] = useState(user.lastName || "");
   const agentFullName = `${agentFirst} ${agentLastName}`;
@@ -54,7 +56,41 @@ function OperatorDashboard() {
 
   const styles = {
   };
-
+  const tabStyles = {
+    tabContainer: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '10px',
+      cursor: 'pointer',
+      border: '1px solid #ddd',
+      borderRadius: '5px',
+      padding: '10px 20px',
+      margin: '0 5px',
+      transition: 'all 0.3s ease',
+    },
+    activeTab: {
+      backgroundColor: '#007bff',
+      color: '#fff',
+      fontWeight: 'bold',
+      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    },
+    inactiveTab: {
+      backgroundColor: '#f8f9fa',
+      color: '#007bff',
+    },
+    icon: {
+      width: '20px',
+      height: '20px',
+      marginRight: '10px',
+    },
+  };
+  useEffect(() => {
+    if (location.state?.activeCard) {
+      setActiveTab(location.state.activeCard);
+    }
+  }, [location.state]);
+  
   useEffect(() => {
     const fetchEstablishmentData = async () => {
       try {
@@ -256,31 +292,113 @@ function OperatorDashboard() {
 
   return (
     <div className="gradient-custom-2" style={{ backgroundColor: 'white' }}>
-        <div className="container">
-          <a className="navbar-brand" style={{ padding: 20 }}>
-          </a>
-        </div>
+      <div className="container">
+        <a className="navbar-brand" style={{ padding: 20 }}></a>
+      </div>
       <MDBContainer className="py-4">
         <MDBRow>
           <MDBCol lg="4">
             <OperatorReserve />
           </MDBCol>
           <MDBCol lg="8">
-            <div className="summary-cards">
-              {summaryCardsData.map(card => (
-                <div key={card.title} className={`card card-${card.cardType}`} 
-                     onClick={() => card.clickable ? handleCardClick(card.cardType) : null} 
-                     style={card.clickable ? (activeCard === card.cardType ? { ...styles.card, ...styles.activeCard } : styles.card) : styles.nonClickableCard}>
-                  <img src={card.imgSrc} alt={card.title} className="card-image" />
-                  <div className="card-content">
-                    <div className="card-title">{card.title}</div>
-                    <div className="card-value">{card.value}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <hr className="divider" />
-            {renderFormBasedOnCardType()}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+  {['occupied', 'reserved'].map((tab) => (
+    <div
+      key={tab}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '10px',
+        cursor: 'pointer',
+        border: activeTab === tab ? '2px solid #0056b3' : '1px solid #ccc',
+        borderRadius: '8px',
+        padding: '12px 24px',
+        margin: '0 10px',
+        transition: 'all 0.3s ease',
+        backgroundColor: activeTab === tab ? '#0056b3' : '#f0f0f0',
+        color: activeTab === tab ? '#fff' : '#0056b3',
+        boxShadow: activeTab === tab ? '0 6px 12px rgba(0, 0, 0, 0.15)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
+        fontSize: '16px',
+        fontWeight: '500',
+      }}
+      onClick={() => setActiveTab(tab)}
+      onMouseEnter={(e) => {
+        if (activeTab !== tab) e.currentTarget.style.backgroundColor = '#e6f2ff';
+      }}
+      onMouseLeave={(e) => {
+        if (activeTab !== tab) e.currentTarget.style.backgroundColor = '#f0f0f0';
+      }}
+    >
+      <img
+        src={tab === 'occupied' ? 'occupied.png' : 'reservedP.png'}
+        alt={tab.charAt(0).toUpperCase() + tab.slice(1)}
+        style={{ width: 30, height: 30, borderRadius: '50%' }}
+      />
+      <span>{tab === 'occupied' ? 'Occupied Spaces' : 'Reserved Spaces'}</span>
+    </div>
+  ))}
+</div>
+  
+            {activeTab === 'occupied' && (
+              <div>
+                <h3>Occupied Spaces</h3>
+                <table class="table table-striped table-hover table-bordered">
+                  <thead className="bg-light">
+                    <tr>
+                      <th>Name</th>
+                      <th>Plate Number</th>
+                      <th>Floor</th>
+                      <th>Slot Number</th>
+                      <th>Status</th>
+                      <th>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parkingLogs.map((log, index) => (
+                      <tr key={index}>
+                        <td>{log.userDetails.name}</td>
+                        <td>{log.userDetails.carPlateNumber}</td>
+                        <td>{log.userDetails.floorTitle}</td>
+                        <td>{log.userDetails.slotId + 1}</td>
+                        <td>{log.from === 'Reservation' ? log.from : log.status}</td>
+                        <td>{formatDateAndTime(log.userDetails.timestamp || log.timestamp)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+  
+            {activeTab === 'reserved' && (
+              <div>
+                <h3>Reserved Spaces</h3>
+                <table class="table table-striped table-hover table-bordered">
+                  <thead className="bg-light">
+                    <tr>
+                      <th>Name</th>
+                      <th>Plate Number</th>
+                      <th>Floor</th>
+                      <th>Slot Number</th>
+                      <th>Status</th>
+                      <th>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reserveLogs.map((log, index) => (
+                      <tr key={index}>
+                        <td>{log.userDetails.name}</td>
+                        <td>{log.userDetails.carPlateNumber}</td>
+                        <td>{log.userDetails.floorTitle}</td>
+                        <td>{log.userDetails.slotId + 1}</td>
+                        <td>{log.from}</td>
+                        <td>{formatDateAndTime(log.timestamp)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </MDBCol>
         </MDBRow>
       </MDBContainer>

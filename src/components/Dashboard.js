@@ -40,6 +40,8 @@ const Establishment = () => {
     const [occupiedSlots, setOccupiedSlots] = useState(0);  // State to keep track of occupied slots
     const [walkInCount, setWalkInCount] = useState(0);
     const [reservationCount, setReservationCount] = useState(0);
+    const [reservationDuration, setReservationDuration] = useState(0);
+
     const styles = {
    
 
@@ -216,6 +218,8 @@ const doughnutData = total > 0
                     const establishmentData = querySnapshot.docs[0].data();
                     setParkingPay(establishmentData.parkingPay);
                     setTotalSlots(establishmentData.totalSlots);
+                    setReservationDuration(establishmentData.reservationDuration);
+
                 }
             } catch (error) {
                 console.error('Error fetching establishment data:', error);
@@ -359,7 +363,7 @@ const doughnutData = total > 0
                 return (
                     <div style={styles.occupiedSection}>
                         <div style={styles.sectionHeader}><FaCar style={styles.icon} /> Occupied Slots</div>
-                        <table className="table align-middle mb-0 bg-white">
+                        <table class="table table-striped table-hover table-bordered">
                             <thead className="bg-light">
                                 <tr>
                                     <th>Name</th>
@@ -389,7 +393,7 @@ const doughnutData = total > 0
                 return (
                     <div style={styles.reserveSection}>
                         <div style={styles.sectionHeader}><FaRegListAlt style={styles.icon} /> Reserved Slots</div>
-                        <table className="table align-middle mb-0 bg-white">
+                        <table class="table table-striped table-hover table-bordered">
                             <thead className="bg-light">
                                 <tr>
                                     <th>Name</th>
@@ -483,7 +487,8 @@ const doughnutData = total > 0
                        
     
                             </MDBCol>
-                            
+                            <div>Reservation Duration: {reservationDuration} Minutes</div>
+
                         </MDBRow>
                         
                     </MDBContainer> 

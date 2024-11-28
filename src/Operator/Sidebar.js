@@ -1,23 +1,52 @@
-import React, { useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
+import { auth, db } from "../config/firebase";
+import { updateDoc, doc, getDoc } from "firebase/firestore";
+
 import { NavLink } from 'react-router-dom';
 import UserContext from '../UserContext';
 import { FaUserCircle } from "react-icons/fa";
 
 const Sidebar = () => {
   const { user } = useContext(UserContext);
+  const [profileImageUrl, setProfileImageUrl] = useState("");
+
+  // Fetch user profile image
+  useEffect(() => {
+    const fetchProfileImage = async () => {
+        if (auth.currentUser) {
+            const userDocRef = doc(db, "agents", auth.currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                setProfileImageUrl(userData.profileImageUrl);
+                console.log("Fetched Profile Image URL:", userData.profileImageUrl);
+            } else {
+                console.log("No such document!");
+            }
+        }
+    };
+
+    fetchProfileImage().catch(console.error);
+}, []);
 
   return (
     <div className="sidebar">
       <div className="admin-container">
-        <img 
-          src="customer.jpg"
-          alt="Admin"
-          className="admin-pic" 
-          style={{ width: '30px', marginRight: '5px', marginLeft: '-50px' }} 
-        />
-        {/* Display the user's email if available */}
+      <img
+        src={profileImageUrl || "default_placeholder.jpg"}
+        alt="Operator"
+        className="admin-pic"
+        style={{ 
+          width: '60px', 
+          height: '60px', 
+          borderRadius: '50%', 
+          marginBottom: '15px' 
+        }}
+      />
+
         <div className="sidebar-header" style={{ padding: '20px', color: 'white', textAlign: 'center', fontSize: '24px' }}>
-          <FaUserCircle size={28} style={{ marginRight: '10px' }} /> Welcome, {user?.firstName || 'No name found'}
+          Welcome, {user?.firstName || 'No name found'}
         </div>
       </div>
       <div className="wrapper">

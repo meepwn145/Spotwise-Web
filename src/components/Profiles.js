@@ -13,7 +13,7 @@ import "./profile.css";
 
 export default function EditButton() {
     const navigate = useNavigate();
-    const { user } = useContext(UserContext);
+    const { user, setUser  } = useContext(UserContext);
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState("");
     const [managementName, setManagementName] = useState("");
@@ -29,6 +29,7 @@ export default function EditButton() {
     // Temporary state to hold the editable values
     const [tempOpenTime, setTempOpenTime] = useState("");
     const [tempCloseTime, setTempCloseTime] = useState("");
+    const [reservationDuration, setReservationDuration] = useState(""); // duration in minutes
 
     const userDocRef = auth.currentUser ? doc(db, "establishments", auth.currentUser.uid) : null;
 
@@ -49,6 +50,8 @@ export default function EditButton() {
                     if (!isEditing) {
                         setOpenTime(userData.openTime || "");
                         setCloseTime(userData.closeTime || "");
+                        setReservationDuration(userData.reservationDuration || "");
+
                     }
                 } else {
                     console.log("No such document!");
@@ -97,8 +100,9 @@ export default function EditButton() {
                 openTime: tempOpenTime,
                 closeTime: tempCloseTime,
                 parkingPay: parkingPay,
-                profileImageUrl: imageUrl
-            };
+                profileImageUrl: imageUrl,
+                reservationDuration: reservationDuration         
+                };
 
             // Remove any fields that are empty or undefined
             Object.keys(updatedData).forEach(key => {
@@ -111,15 +115,17 @@ export default function EditButton() {
                 await updateDoc(userDocRef, updatedData);
                 console.log("User data updated/created successfully!");
                 console.log("Updated profile image URL:", imageUrl);
-                setIsEditing(false);  // Exit edit mode after successful update
-            } catch (error) {
-                console.error("Error updating user data: ", error);
-            }
-        } else {
-            console.error("User not authenticated");
-        }
-    };
+                // Update UserContext
+            setUser(prev => ({ ...prev, ...updatedData }));
 
+            setIsEditing(false); // Exit edit mode after successful update
+        } catch (error) {
+            console.error("Error updating user data: ", error);
+        }
+    } else {
+        console.error("User not authenticated");
+    }
+};
     const handleSaveProfile = async () => {
         let finalImageUrl = profileImageUrl;
 
@@ -181,8 +187,13 @@ export default function EditButton() {
 
 
                                     <div className="text-center mb-4">
-                                        <MDBCardImage src={profileImageUrl || "defaultt.png"} alt="Profile" className="img-thumbnail" style={{ width: "150px", borderRadius: "50%" }} />
-                                    </div>
+                                    <MDBCardImage
+              src={profileImageUrl}
+              alt="Profile"
+              className="img-fluid rounded-circle mb-3"
+              style={{ width: '150px', height: '150px', objectFit: 'cover', border: '4px solid #132B4B' }}
+            />
+                                                </div>
                                     {isEditing ? (
                                         <>
                                             <div className="mb-3">
@@ -216,6 +227,10 @@ export default function EditButton() {
                                                 <label className="form-label">Close Time</label>
                                                 <input type="time" className="form-control" value={tempCloseTime} onChange={(e) => setTempCloseTime(e.target.value)} />
                                             </div>
+                                            <div className="mb-3">
+                                                <label htmlFor="duration" className="form-label">Reservation Duration (minutes)</label>
+                                                <input type="number" className="form-control" id="duration" value={reservationDuration} onChange={(e) => setReservationDuration(Number(e.target.value))} disabled={!isEditing} />
+                                            </div>
                                             <MDBBtn color="primary" className="me-2" onClick={handleSaveProfile} style={buttonStyles}>
                                                 Save Changes
                                             </MDBBtn>
@@ -232,6 +247,7 @@ export default function EditButton() {
                                             <p className="card-text mb-1"><strong>Contact Number:</strong> {companyContact}</p>
                                             <p className="card-text mb-1"><strong>Open Time:</strong> {openTime || "Not Set"}</p>
                                             <p className="card-text mb-1"><strong>Close Time:</strong> {closeTime || "Not Set"}</p>
+                                            <p className="card-text mb-1"><strong>Reservation Duration:</strong> {reservationDuration || "Not Set"}</p>
                                             <div>&nbsp;</div>
                                             <div>&nbsp;</div>
                                             <MDBBtn

@@ -38,6 +38,7 @@ function Home() {
   const [occupiedSlots, setOccupiedSlots] = useState(0);  // State to keep track of occupied slots
   const [reservedSlots, setReservedSlots] = useState(0); // Define reservedSlots state
   const [reservedSpaces, setReservedSpaces] = useState(0);
+  const [reservationDuration, setReservationDuration] = useState(0);
 
   const chartContainerStyle = {
     display: "flex",          // Display items in a row
@@ -46,6 +47,15 @@ function Home() {
     margin: "20px",  // Add this line to increase spacing around each chart card
 
   };
+  const dividerStyle = {
+    width: "1px", 
+    height: "40px", 
+    background: "linear-gradient(to bottom, #0b0e16, #00c6ff)", 
+    borderRadius: "2px", 
+    margin: "0 0px", // Reduce the horizontal margin to bring elements closer
+    boxShadow: "0px 1px 3px rgba(0, 0, 0, 0.1)", // Subtle shadow for depth
+  };
+  
   
   const chartCardStyle = {
     backgroundColor: "#f8f9fa", // Light background similar to the example
@@ -140,6 +150,8 @@ function Home() {
           const establishmentData = querySnapshot.docs[0].data();
           setParkingPay(establishmentData.parkingPay);
           setTotalSlots(establishmentData.totalSlots);
+          setReservationDuration(establishmentData.reservationDuration);
+
           const newUser = {
             ...user,
             coordinates: establishmentData.coordinates,
@@ -261,41 +273,42 @@ function Home() {
           Total Parking Spaces
         </Nav.Link>
       </Nav.Item>
-      <Nav.Item>
-        <Nav.Link
-          eventKey="available"
-          className="custom-tab"
-        >
-          Available Parking Spaces
-        </Nav.Link>
-      </Nav.Item>
-      <Nav.Item>
-                     
-        <Nav.Link
-          eventKey="fee"
-          className="custom-tab"
-        >
-          Parking Fee
-        </Nav.Link>
-        
-      </Nav.Item>
-      <Nav.Item className="dropdown">
-                        <a className="nav-link custom-tab dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
-                          More
-                        </a>
-                        <ul className="dropdown-menu">
-                          <li>
-                            <button className="dropdown-item" onClick={() => handleNavigation('occupied')}>
-                              Occupied Spaces
-                            </button>
-                          </li>
-                          <li>
-                            <button className="dropdown-item" onClick={() => handleNavigation('reserve')}>
-                              Reserved Spaces
-                            </button>
-                          </li>
-                        </ul>
-                      </Nav.Item>
+      <div style={dividerStyle}></div> {/* Divider */}
+        <Nav.Item>
+          <Nav.Link eventKey="available" className="custom-tab">
+            Available Parking Spaces
+          </Nav.Link>
+        </Nav.Item>
+        <div style={dividerStyle}></div> {/* Divider */}
+        <Nav.Item>
+          <Nav.Link eventKey="fee" className="custom-tab">
+            Parking Fee
+          </Nav.Link>
+        </Nav.Item>
+        <div style={dividerStyle}></div> {/* Divider */}
+        <Nav.Item className="dropdown">
+          <a
+            className="nav-link custom-tab dropdown-toggle"
+            data-bs-toggle="dropdown"
+            role="button"
+            aria-expanded="false"
+          >
+            More
+          </a>
+          <ul className="dropdown-menu">
+  <li className="dropdown-item-container" data-hover-info="Shows currently occupied parking spaces" >
+    <button className="dropdown-item" onClick={() => handleNavigation('occupied')}>
+      Occupied Spaces
+    </button>
+  </li>
+  <li className="dropdown-item-container" data-hover-info="Shows currently reserved parking spaces">
+    <button className="dropdown-item" onClick={() => handleNavigation('reserved')}>
+      Reserved Spaces
+    </button>
+  </li>
+</ul>
+
+        </Nav.Item>
     </Nav>
   </Col>
 </Row>
@@ -364,6 +377,8 @@ function Home() {
              
             </div>
           </MDBCol>
+          <div className="duration">Establishment Reservation Duration: {reservationDuration} minutes</div>
+
         </MDBRow>
       </MDBContainer>
       
@@ -396,7 +411,7 @@ function Home() {
 
     <div style={chartCardStyle}>
         <h5>Reservation vs. Walk-In</h5>
-        <ResponsiveContainer width={430} height={300}>  
+        <ResponsiveContainer width={480} height={300}>  
             <PieChart>
                 <Pie
                     data={doughnutData}
