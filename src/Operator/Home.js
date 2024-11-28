@@ -38,6 +38,7 @@ function Home() {
   const [occupiedSlots, setOccupiedSlots] = useState(0);  // State to keep track of occupied slots
   const [reservedSlots, setReservedSlots] = useState(0); // Define reservedSlots state
   const [reservedSpaces, setReservedSpaces] = useState(0);
+  const [reservationDuration, setReservationDuration] = useState(0);
 
   const chartContainerStyle = {
     display: "flex",          // Display items in a row
@@ -140,6 +141,7 @@ function Home() {
           const establishmentData = querySnapshot.docs[0].data();
           setParkingPay(establishmentData.parkingPay);
           setTotalSlots(establishmentData.totalSlots);
+          setReservationDuration(establishmentData.reservationDuration);
           const newUser = {
             ...user,
             coordinates: establishmentData.coordinates,
@@ -299,8 +301,6 @@ function Home() {
     </Nav>
   </Col>
 </Row>
-
-
 <Row>
   <Col>
     <Tab.Content>
@@ -359,16 +359,13 @@ function Home() {
     </Tab.Content>
   </Col>
 </Row>
-
       </Tab.Container>
-             
             </div>
           </MDBCol>
+          <div className="duration">Establishment Reservation Duration: {reservationDuration} minutes</div>
         </MDBRow>
       </MDBContainer>
-      
       <hr/>
-
       <div style={chartContainerStyle}>
     <div style={chartCardStyle}>
         <h5>Current Occupancy Rate</h5>

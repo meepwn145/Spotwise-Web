@@ -7,6 +7,10 @@
   box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);;
   max-width: 100%;
   margin: 0 auto;
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+  border-bottom-left-radius: 15px;
+  border-bottom-right-radius: 15px;
 }
 
 .parkingSlot {
@@ -26,7 +30,7 @@
 .parkingContainer {
   display: flex;
   justify-content: center;
-  margin: 0 auto;    
+  margin-left: 2vh;  
   width: fit-content ;
   margin-top: 10vh;
 }
@@ -109,10 +113,10 @@
 }
 .search-bar {
   background-color: white;
-  background-image: url('/public/search.png');
   background-position: 3px ;
   background-repeat: no-repeat;
-  padding-left: 40px;
+  padding-left: 15px;
+  justify-content: flex-end;
 }
 .user-details {
   background-color: #e0fff6; /* Light grey background */
@@ -159,6 +163,26 @@
   border-radius: 8px;
 }
 
+.divider{
+  width: 100%;
+  margin: 0 auto;  
+  border-top: 1px solid #333;
+}
+
+.search-plate{
+  padding: 20px;
+  margin-top: 10px;
+  border-radius: 8px;
+}
+
+.duration{
+  width: 100%;
+  margin-left: 50;
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
 /* Custom styles for the body of the toast */
 .custom-body {
   /* Consistent font and padding */
@@ -181,3 +205,4 @@
     transform: scaleX(0);
   }
 }
+

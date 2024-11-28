@@ -29,6 +29,8 @@ export default function EditButton() {
     // Temporary state to hold the editable values
     const [tempOpenTime, setTempOpenTime] = useState("");
     const [tempCloseTime, setTempCloseTime] = useState("");
+    const [reservationDuration, setReservationDuration] = useState(""); // duration in minutes
+
 
     const userDocRef = auth.currentUser ? doc(db, "establishments", auth.currentUser.uid) : null;
 
@@ -49,6 +51,7 @@ export default function EditButton() {
                     if (!isEditing) {
                         setOpenTime(userData.openTime || "");
                         setCloseTime(userData.closeTime || "");
+                        setReservationDuration(userData.reservationDuration || "");
                     }
                 } else {
                     console.log("No such document!");
@@ -97,7 +100,8 @@ export default function EditButton() {
                 openTime: tempOpenTime,
                 closeTime: tempCloseTime,
                 parkingPay: parkingPay,
-                profileImageUrl: imageUrl
+                profileImageUrl: imageUrl,
+                reservationDuration: reservationDuration 
             };
 
             // Remove any fields that are empty or undefined
@@ -149,6 +153,7 @@ export default function EditButton() {
         width: "120px",
         height: "35px",
     };
+
 
     return (            
         <section>
@@ -216,6 +221,10 @@ export default function EditButton() {
                                                 <label className="form-label">Close Time</label>
                                                 <input type="time" className="form-control" value={tempCloseTime} onChange={(e) => setTempCloseTime(e.target.value)} />
                                             </div>
+                                            <div className="mb-3">
+        <label htmlFor="duration" className="form-label">Reservation Duration (minutes)</label>
+        <input type="number" className="form-control" id="duration" value={reservationDuration} onChange={(e) => setReservationDuration(Number(e.target.value))} disabled={!isEditing} />
+    </div>
                                             <MDBBtn color="primary" className="me-2" onClick={handleSaveProfile} style={buttonStyles}>
                                                 Save Changes
                                             </MDBBtn>
@@ -232,6 +241,7 @@ export default function EditButton() {
                                             <p className="card-text mb-1"><strong>Contact Number:</strong> {companyContact}</p>
                                             <p className="card-text mb-1"><strong>Open Time:</strong> {openTime || "Not Set"}</p>
                                             <p className="card-text mb-1"><strong>Close Time:</strong> {closeTime || "Not Set"}</p>
+                                            <p className="card-text mb-1"><strong>Reservation Duration:</strong> {reservationDuration || "Not Set"}</p>
                                             <div>&nbsp;</div>
                                             <div>&nbsp;</div>
                                             <MDBBtn
