@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../config/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import './AdminPage.css';
+import AdminSide from './adminside';
 
 const FetchParkingUsers = () => {
   const [parkingSeeker, setParkingSeeker] = useState([]);
@@ -27,31 +28,8 @@ const FetchParkingUsers = () => {
   return (
     <div className="admin-dashboard">
       <div className="sidebar">
-        <div className="admin-container">
-          <img
-            src="customer.jpg"
-            alt="Admin"
-            className="admin-pic"
-            style={{ width: '50px', marginRight: '10px' }}
-          />
-          <span className="admin-text">Admin</span>
-        </div>
-        <nav>
+      <AdminSide />
 
-        <div class="wrapper">
-    <div class="side">
-        <h2>Menu</h2>
-        <ul>
-            <li><a href="AdminPage"><i class="fas fa-home"></i>Home</a></li>
-            <li><a href='FetchEstablishments'><i class="fas fa-user"></i>Establishment Account</a></li>
-            <li><a href='FetchParkingUsers'><i class="fas fa-address-card"></i>Parking Seeker List</a></li>
-            <li><a href='FetchAgents'><i class="fas fa-project-diagram"></i>Operator List</a></li>
-            <li><a href="/"><i className="fas fa-sign-out-alt" style={{ color: 'red' }}></i>Logout</a></li>
-        </ul> 
-    </div>
-    </div>
-    
-        </nav>
       </div>
 
 

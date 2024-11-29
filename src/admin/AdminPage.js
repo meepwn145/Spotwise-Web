@@ -16,6 +16,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import "./AdminPage.css";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
+import AdminSide from './adminside';
 
 function AdminPage() {
 	const [pendingAccounts, setPendingAccounts] = useState([]);
@@ -214,156 +215,121 @@ function AdminPage() {
 	}, []);
 
 	const handleApprove = async (account) => {
-		const { id, ...accountData } = account;
-
-		const userCredential = await createUserWithEmailAndPassword(
-			auth,
-			account.email,
-			account.password
-		);
-
-		const user = userCredential.user;
-		const accountRef = doc(db, "pendingEstablishments", account.id);
-
-		await setDoc(doc(db, "establishments", user.uid), {
-			...accountData,
-			createdAt: new Date(),
-			isApproved: true,
-		});
-
-		await deleteDoc(accountRef);
-
-		setPendingAccounts(pendingAccounts.filter((account) => account.email !== accountData.email));
+		try {
+			const { id, ...accountData } = account;
+	
+			// Validate password length
+			if (!account.password || account.password.length < 6) {
+				alert("Password is too weak. It must be at least 6 characters long.");
+				return;
+			}
+	
+			// Create user in Firebase Authentication
+			const userCredential = await createUserWithEmailAndPassword(
+				auth,
+				account.email,
+				account.password
+			);
+	
+			const user = userCredential.user;
+	
+			// Add to 'establishments' collection
+			await setDoc(doc(db, "establishments", user.uid), {
+				...accountData,
+				createdAt: new Date(),
+				isApproved: true,
+			});
+	
+			// Remove from pending accounts
+			await deleteDoc(doc(db, "pendingEstablishments", id));
+	
+			// Update local state
+			setPendingAccounts((prev) => prev.filter((item) => item.id !== id));
+	
+			// Success alert
+			alert("Account approved successfully.");
+		} catch (error) {
+			// Error handling
+			if (error.code === "auth/weak-password") {
+				alert("Password is too weak. It must be at least 6 characters long.");
+			} else {
+				console.error("Error approving account:", error);
+				alert("An error occurred while approving the account.");
+			}
+		}
 	};
-
-	const handleDecline = async (accountId) => {};
-
+	
+	
+	const handleDecline = async (accountId) => {
+		try {
+			// Delete the document from the Firestore collection
+			await deleteDoc(doc(db, "pendingEstablishments", accountId));
+	
+			// Update the local state to remove the declined account
+			setPendingAccounts((prev) => prev.filter((item) => item.id !== accountId));
+	
+			alert("Account declined successfully.");
+		} catch (error) {
+			console.error("Error declining account:", error);
+			alert("An error occurred while declining the account.");
+		}
+	};
+	
 	return (
-		<div>
-			<div className="admin-dashboard">
-				<div className="sidebar">
-					<div className="admin-container">
-						<img
-							src="customer.jpg"
-							alt="Admin"
-							className="admin-pic"
-							style={{ width: "50px", marginRight: "10px" }}
-						/>
-						<span className="admin-text">Admin</span>
-					</div>
-					<div class="wrapper">
-						<div class="side">
-							<h2>Menu</h2>
-							<ul>
-								<li>
-									<a href="AdminPage">
-										<i class="fas fa-home"></i>Home
-									</a>
-								</li>
-								<li>
-									<a href="FetchEstablishments">
-										<i class="fas fa-user"></i>Establishment Account
-									</a>
-								</li>
-								<li>
-									<a href="FetchParkingUsers">
-										<i class="fas fa-address-card"></i>Parking Seeker List
-									</a>
-								</li>
-								<li>
-									<a href="FetchAgents">
-										<i class="fas fa-project-diagram"></i>Agents List
-									</a>
-								</li>
-								<li>
-									<a href="/">
-										<i className="fas fa-sign-out-alt" style={{ color: "red" }}></i>Logout
-									</a>
-								</li>
-							</ul>
-						</div>
-					</div>
-				</div>
-				<div className="main-content" style={{ margin: "auto", marginTop: "10vh" }}>
-					<div className="summary-cards">
-						{summaryCardsData.map((card) => (
-							<div key={card.title} className="card">
-								<img src={card.imgSrc} alt={card.title} className="card-image" />
-								<div className="card-content">
-									<div className="card-title">{card.title}</div>
-									<div className="card-value">{card.value}</div>
-								</div>
-							</div>
-						))}
-					</div>
-					<div className="project-list">
-						<h3 className="pending">Pending Establishment Accounts</h3>
-						{pendingAccounts.map((account) => (
-							<div key={account.id} className="pending-sub">
-								<div className="info-section">
-									<div className="title">Email</div>
-									<div className="value">
-										<Link to={`/email/${account.id}`}>
-											<span className="highlight-background">{account.email}</span>
-										</Link>
-									</div>
-								</div>
-								<div className="info-section">
-									<div className="title">Management name</div>
-
-									<div className="value">
-										<span className="highlight-background">{account.managementName}</span>
-									</div>
-								</div>
-								<div className="info-section">
-									<div className="title">Contact number</div>
-									<div class Name="value">
-										<span className="highlight-background">{account.managementName}</span>
-									</div>
-								</div>
-								<div className="info-section">
-									<div className="title">Address</div>
-									<div className="value">
-										<span className="highlight-background">{account.companyAddress}</span>
-									</div>
-								</div>
-								<div className="info-section">
-									<div className="title">Number of Floors</div>
-									<div className="value">
-										<span className="highlight-background">{account.numberOfFloors}</span>
-									</div>
-								</div>
-								<div className="info-section">
-									<div className="title">Total Slots</div>
-									<div className="value">
-										<span className="highlight-background">{account.totalSlots}</span>
-									</div>
-								</div>
-								<div>
-									<button
-										onClick={() => handleApprove(account)}
-										className="approve-button"
-										style={{ fontStyle: "bold", color: "white", alignSelf: "center" }}
-									>
-										Approve
-									</button>
-								</div>
-								<div>
-									<button
-										onClick={() => handleDecline(account.id)}
-										className="decline-button"
-										style={{ fontStyle: "bold", color: "white", alignSelf: "center" }}
-									>
-										Decline
-									</button>
-								</div>
-							</div>
-						))}
-					</div>
-				</div>
+		<div className="admin-dashboard">
+			<AdminSide />
+			<div className="main-content" style={{ padding: "20px" }}>
+				<h3>Pending Establishment Accounts</h3>
+				{pendingAccounts.length === 0 ? (
+					<p style={{ textAlign: "center", marginTop: "20px", fontSize: "16px", color: "#555" }}>
+						No pending establishment accounts.
+					</p>
+				) : (
+					<table className="table table-striped table-hover table-bordered">
+						<thead>
+							<tr>
+								<th>Email</th>
+								<th>Management Name</th>
+								<th>Contact Number</th>
+								<th>Address</th>
+								<th>Number of Floors</th>
+								<th>Total Slots</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							{pendingAccounts.map((account) => (
+								<tr key={account.id}>
+									<td>{account.email}</td>
+									<td>{account.managementName}</td>
+									<td>{account.contactNumber}</td>
+									<td>{account.companyAddress}</td>
+									<td>{account.numberOfFloors}</td>
+									<td>{account.totalSlots}</td>
+									<td>
+										<button
+											onClick={() => handleApprove(account)}
+											className="approve-button"
+										>
+											Approve
+										</button>
+										<button
+											onClick={() => handleDecline(account.id)}
+											className="decline-button"
+										>
+											Decline
+										</button>
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				)}
 			</div>
 		</div>
 	);
+	
+
 }
 
 export default AdminPage;
