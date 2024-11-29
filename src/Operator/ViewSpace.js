@@ -377,31 +377,12 @@ const [enterPressed, setEnterPressed] = useState(false);
   };
 
   const handleTabSelect = (key) => {
-    setCurrentTab(key);
-  };
-
-  {slotSets[currentSetIndex]?.slots.map((slot, slotIndex) => {
-    const isHighlighted = slotIndex === highlightedSlot;
-    return (
-      <div key={slotIndex} style={{
-        backgroundColor: slot?.occupied ? "red" : isHighlighted ? "#FFFF00" : "green",
-        // other styles
-      }}>
-        Slot {slotIndex + 1}: {slot?.occupied ? 'Occupied' : 'Available'}
-      </div>
-    );
-  })}
+    console.log("Tab selected:", key);
+    const newIndex = parseInt(key, 10);
+    setCurrentSetIndex(newIndex);
   
-
-  const handleFloorChange = (newFloorIndex) => {
-    if (newFloorIndex >= 0 && newFloorIndex < slotSets.length) {
-      setCurrentSetIndex(newFloorIndex);
-      // Check if highlightedSlot is within the new floor's slot range
-      if (highlightedSlot !== null && slotSets[newFloorIndex]) {
-        if (highlightedSlot >= slotSets[newFloorIndex].slots.length) {
-          setHighlightedSlot(null); // Reset if out of range
-        }
-      }
+    if (slotSets[newIndex] && (selectedSlot >= slotSets[newIndex].slots.length)) {
+      setSelectedSlot(null);
     }
   };
   
@@ -409,54 +390,105 @@ const [enterPressed, setEnterPressed] = useState(false);
 
   const [recordFound, setRecordFound] = useState(true);
   const [userFound, setUserFound] = useState(true);
-  const searchInFirebase = async (searchInput, showAlert = true) => {
+  const searchInFirebase = async (searchInput) => {
     try {
       const collectionRef = collection(db, "user");
-      const q = query(
-        collectionRef,
-        where("carPlateNumber", "==", searchInput)
-      );
+      const q = query(collectionRef, where("carPlateNumber", "==", searchInput));
       const querySnapshot = await getDocs(q);
-      const user = querySnapshot.docs.find(
-        (doc) => doc.data().carPlateNumber === searchInput
-      );
-
+      const user = querySnapshot.docs.find(doc => doc.data().carPlateNumber === searchInput);
+  
       const { found, floorIndex, slotIndex } = findPlateAcrossFloors(searchInput);
+      setUserPlateNumber(searchInput);  // Set the plate number regardless of finding the user
       if (user) {
         console.log("Found user:", user.data());
-        setUserPlateNumber(user.data().carPlateNumber || searchInput);
         setUserDetails(user.data());
         setUserFound(true);
-
-        if (found && showAlert) {
-          setCurrentSetIndex(floorIndex); // Navigate to the floor tab
-          setSelectedSlot(slotIndex); // Select the slot
-          const floorName = slotSets[floorIndex].title;
-          alert(`Car found at ${floorName}, Slot Number ${slotIndex + 1}`);
+  
+        if (found) {
+          setCurrentSetIndex(floorIndex);
+          setSelectedSlot(slotIndex);
+          console.log(`Car is already assigned at floor ${floorIndex}, Slot Number ${slotIndex + 1}`);
         } else {
-          alert("Car is registered but currently not parked.");
+          console.log("Car is registered but currently not parked.");
         }
       } else {
-        console.log("User not found.");
-        setUserDetails({ carPlateNumber: searchInput });
-        setUserPlateNumber(searchInput);
+        console.log("User not found. Car is not registered and currently not parked.");
+        setUserDetails({});
         setUserFound(false);
-        if (found && showAlert) {
-          setCurrentSetIndex(floorIndex); // Navigate to the floor tab
-          setSelectedSlot(slotIndex);
-          const floorName = slotSets[floorIndex].title;
-          alert(`Car is not registered but found on ${floorName}, Slot Number ${slotIndex + 1}`);
-        } else if (showAlert) {
-          alert("Car is not registered and currently not parked.");
-        }
       }
-      setShowButtons(true); // Show Assign and Exit buttons regardless of search outcome
-      setShowConfirmation(false); //
+      setShowButtons(true);
     } catch (error) {
       console.error("Error:", error);
       setShowButtons(false);
     }
   };
+  
+  
+
+  const [userDetailsSecond, setUserDetailsSecond] = useState({});
+const [userPlateNumberSecond, setUserPlateNumberSecond] = useState("");
+const [currentSetIndexSecond, setCurrentSetIndexSecond] = useState(0);
+const [selectedSlotSecond, setSelectedSlotSecond] = useState(null);
+const [showButtonsSecond, setShowButtonsSecond] = useState(false);
+const [userFoundSecond, setUserFoundSecond] = useState(false);
+useEffect(() => {
+  if (currentSetIndexSecond !== null) {
+    setCurrentSetIndex(currentSetIndexSecond);
+  }
+}, [currentSetIndexSecond]);
+
+
+const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
+  try {
+    const collectionRef = collection(db, "user");
+    const q = query(
+      collectionRef,
+      where("carPlateNumber", "==", searchInput)
+    );
+    const querySnapshot = await getDocs(q);
+    const user = querySnapshot.docs.find(
+      (doc) => doc.data().carPlateNumber === searchInput
+    );
+
+    const { found, floorIndex, slotIndex } = findPlateAcrossFloors(searchInput);
+    if (user) {
+      console.log("Second Input - Found user:", user.data());
+      setUserPlateNumberSecond(user.data().carPlateNumber || searchInput);
+      setUserDetailsSecond(user.data());
+      setUserFoundSecond(true);
+
+      if (found && showAlert) {
+        setCurrentSetIndexSecond(floorIndex); // Different variable for index
+        setSelectedSlotSecond(slotIndex); // Different variable for slot
+        setHighlightedFloorIndex(floorIndex); // Ensure highlighting is set
+        setHighlightedSlot(slotIndex);
+        const floorName = slotSets[floorIndex].title;
+        alert(`Second Input - Car found at ${floorName}, Slot Number ${slotIndex + 1}`);
+      } else {
+        alert("Second Input - Car is registered but currently not parked.");
+      }
+    } else {
+      console.log("Second Input - User not found.");
+      setUserDetailsSecond({ carPlateNumber: searchInput });
+      setUserPlateNumberSecond(searchInput);
+      setUserFoundSecond(false);
+      if (found && showAlert) {
+        setCurrentSetIndexSecond(floorIndex);
+        setSelectedSlotSecond(slotIndex);
+        setHighlightedFloorIndex(floorIndex);
+        setHighlightedSlot(slotIndex);
+        const floorName = slotSets[floorIndex].title;
+        alert(`Second Input - Car is not registered but found on ${floorName}, Slot Number ${slotIndex + 1}`);
+      } else if (showAlert) {
+        alert("Second Input - Car is not registered and currently not parked.");
+      }
+    }
+    setShowButtonsSecond(true); // Show Assign and Exit buttons regardless of search outcome
+  } catch (error) {
+    console.error("Second Input - Error:", error);
+    setShowButtonsSecond(false);
+  }
+};
 
   const navigate = useNavigate();
 
@@ -526,8 +558,8 @@ const [enterPressed, setEnterPressed] = useState(false);
 
   const handleAddToSlot = (carPlateNumber, slotIndex) => {
     const slot = slotSets[currentSetIndex].slots[slotIndex];
-    if (slot.occupied) {
-      setErrorMessage("Cannot assign an already occupied slot.");
+    if (slot.occupied ) {
+      setErrorMessage("Cannot assign user is already.");
       return;
     }
     if (!carPlateNumber || carPlateNumber.trim() === "") {
@@ -697,7 +729,7 @@ const [enterPressed, setEnterPressed] = useState(false);
     return (
       <div className="search-plate">
       <SearchForm
-                onSearch={searchInFirebase} // Assuming you have a method to handle the search
+                onSearch={searchInFirebaseSecondInput} // Assuming you have a method to handle the search
                 placeholder="Search car plate number"  // Custom placeholder for searching
       />
       </div>
@@ -737,11 +769,12 @@ const [enterPressed, setEnterPressed] = useState(false);
             )}
           </div>
         )}
-        <Tab.Container
-          activeKey={currentSetIndex.toString()}
-          onSelect={(k) => setCurrentSetIndex(parseInt(k, 10))}
-          defaultActiveKey="0"
-        >
+      <Tab.Container
+  activeKey={currentSetIndex.toString()}
+  onSelect={handleTabSelect} // Make sure this is correctly set
+  defaultActiveKey="0"
+>
+
           <Nav
           >
             {slotSets.map((slotSet, index) => (
