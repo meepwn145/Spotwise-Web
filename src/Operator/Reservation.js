@@ -8,6 +8,7 @@ import {
   getDoc,
   setDoc,
   onSnapshot,
+  updateDoc,
   deleteDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -32,8 +33,10 @@ import Button from "react-bootstrap/Button";
 import MapComponent from "../components/Map";
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
+import { fetchMultipleReservations, timeOptions } from "../helper/helper";
 
 const Reservation = () => {
+  
     const { user } = useContext(UserContext);
     const [reservationRequests, setReservationRequests] = useState([]);
     const [historyLog, setHistoryLog] = useState([]);
@@ -58,7 +61,8 @@ const Reservation = () => {
     const [activeTab, setActiveTab] = useState("reservation");
     const [mapModal, setMapModal] = useState({ show: false, data: null });
     const [imageModal, setImageModal] = useState({ show: false, url: null });
-    const toggleMapModal = (data) => setMapModal({ show: !mapModal.show, data });
+    const isValidCoordinate = (coord) => coord && coord.lat && coord.lng;
+
     const toggleImageModal = (url) =>
     setImageModal({ show: !imageModal.show, url });
     const filterByDate = (logEntry) => {
@@ -69,6 +73,19 @@ const Reservation = () => {
       return true;
   };
 
+  useEffect(() => {
+    console.log("Map Modal Data:", mapModal.data);
+    console.log("User Coordinates:", user?.coordinates);
+}, [mapModal]);
+
+const toggleMapModal = (data) => {
+  if (data?.currentLocation) {
+      setMapModal({ show: true, data });
+  } else {
+      console.error("Invalid map data:", data);
+      setMapModal({ show: false, data: null });
+  }
+};
 
     useEffect(() => {
         const unsubscribe = onSnapshot(collection(db, 'notifications'), (snapshot) => {
@@ -107,76 +124,24 @@ const Reservation = () => {
       const renderTabContent = () => {
         switch (activeTab) {
           case "reservation":
-            return reservationRequests.length === 0 ? (
-              <p className="text-center mt-4">No pending reservations.</p>
-            ) : (
-            <table class="table table-striped table-hover table-bordered">
-                {renderTableHeader([
-                  "Name",
-                  "Time of Request",
-                  "Plate Number",
-                  "Floor",
-                  "Slot Number",
-                  "Actions",
-                ])}
-                <tbody>
-                  {reservationRequests.map((request, index) => (
-                    <tr key={index}>
-                      <td>{request.userName || "N/A"}</td>
-                      <td>{request.timeOfRequest}</td>
-                      <td>{request.carPlateNumber || "N/A"}</td>
-                      <td>{request.floorTitle || "N/A"}</td>
-                      <td>{request.slotId + 1 || "N/A"}</td>
-                      <td>
-                        <Button
-                          variant="primary"
-                          className="me-2"
-                          size="sm"
-
-                          onClick={() => toggleMapModal(request)}
-                        >
-                          View Map
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          className="me-2"
-                          size="sm"
-
-                          onClick={() => toggleImageModal(request.imageUri)}
-                        >
-                          View Proof
-                        </Button>
-                        <Button
-                        variant="success"
-                        onClick={() => handleReservation(true, request, index)}
-                        className="me-2"
-                        size="sm"
-                      >
-                        Accept Reservation
-                      </Button>
-                      <Button
-                        variant="danger"
-                        className="me-2"
-
-                        onClick={() => handleReservation(false, request, index)}
-                        size="sm"
-                      >
-                        Decline Reservation
-                      </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            );
+            if (reservationRequests.length === 0) {
+              return <p className="text-center mt-4">No pending Reservation.</p>;
+            }
+            return reservationRequests.map((request, index) => (
+              <ReservationRequest key={index} request={request} index={index} />
+            ));
           case "accepted":
-            const acceptedLogs = historyLog.filter(
-              (log) => log.status === "Accepted" && filterByDate(log)
-            );
             return (
-              <>
-                <div className="d-flex justify-content-between mb-3">
-                  <div>
+              <div>
+                <h6 className="mt-3">Filter by Date</h6>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div style={{ marginRight: "30px" }}>
                     <label>Start Date:&nbsp;</label>
                     <DatePicker
                       selected={startDate}
@@ -195,28 +160,27 @@ const Reservation = () => {
                     />
                   </div>
                 </div>
-                <table class="table table-striped table-hover table-bordered">
-                  {renderTableHeader(["Name", "Date", "Status"])}
-                  <tbody>
-                    {acceptedLogs.map((log, index) => (
-                      <tr key={index}>
-                        <td>{log.name}</td>
-                        <td>{log.date}</td>
-                        <td>{log.status}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
+                {historyLog
+                  .filter((log) => log.status === "Accepted" && filterByDate(log))
+                  .map((log, index) => (
+                    <div className="alert alert-success mt-2" key={index}>
+                      {log.name} - Accepted on {log.date}
+                    </div>
+                  ))}
+              </div>
             );
           case "declined":
-            const declinedLogs = historyLog.filter(
-              (log) => log.status === "Declined" && filterByDate(log)
-            );
             return (
-              <>
-                <div className="d-flex justify-content-between mb-3">
-                  <div>
+              <div>
+                <h6 className="mt-3">Filter by Date</h6>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: "20px",
+                  }}
+                >
+                  <div style={{ marginRight: "30px" }}>
                     <label>Start Date:&nbsp;</label>
                     <DatePicker
                       selected={startDate}
@@ -235,19 +199,14 @@ const Reservation = () => {
                     />
                   </div>
                 </div>
-                <table class="table table-striped table-hover table-bordered">
-                  {renderTableHeader(["Name", "Date", "Status"])}
-                  <tbody>
-                    {declinedLogs.map((log, index) => (
-                      <tr key={index}>
-                        <td>{log.name}</td>
-                        <td>{log.date}</td>
-                        <td>{log.status}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
+                {historyLog
+                  .filter((log) => log.status === "Declined" && filterByDate(log))
+                  .map((log, index) => (
+                    <div className="alert alert-danger mt-2" key={index}>
+                      {log.name} - Declined on {log.date}
+                    </div>
+                  ))}
+              </div>
             );
           default:
             return null;
@@ -314,12 +273,38 @@ const Reservation = () => {
           };
         }
       );
+      
       const reservations = await Promise.all(reservationPromises);
       console.log("Fetched reservations:", reservations);
       setReservationRequests(reservations);
     } catch (error) {
       console.error("Error fetching reservations:", error);
     }
+    const queries = [
+      {
+        collectionName: "reservations",
+        conditions: [["managementName", "==", managementName]],
+      },
+    ];
+
+    const unsubscribeAll = fetchMultipleReservations(
+      queries,
+      ({ collectionName, data, error }) => {
+        if (error) {
+          return;
+        }
+
+        if (data) {
+          setReservationRequests(data);
+        } else {
+        }
+      }
+    );
+
+    // Cleanup on component unmount
+    return () => {
+      unsubscribeAll();
+    };
   };
 
   useEffect(() => {
@@ -335,6 +320,8 @@ const Reservation = () => {
 
     return () => unsubscribe();
   }, [user?.managementName]);
+
+  const [reservationIsApprove, setreservationIsApprove] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(
@@ -370,8 +357,13 @@ const Reservation = () => {
     const data = await response.json();
     return data.sub_id; // assuming the response contains `sub_id`
 };
-const handleReservation = async (accepted, reservationRequest, index) => {
-  const { id, userName, carPlateNumber, slotId, timeOfRequest, floorTitle, userToken, userEmail, reservationId,
+const handleReservation = async (
+  accepted,
+  reservationRequest,
+  index,
+  isPaid
+) => {
+    const { id, userName, carPlateNumber, slotId, timeOfRequest, floorTitle, userToken, userEmail, reservationId,
     } = reservationRequest;
     const status = accepted ? "Accepted" : "Declined";
 		console.log("reservationId", reservationId);
@@ -382,108 +374,143 @@ const handleReservation = async (accepted, reservationRequest, index) => {
       carPlateNumber,
       slotId,
       timeOfRequest,
-      email: userEmail || 'N/A', // Ensure email is not undefined
+      email: userEmail || "N/A", // Ensure email is not undefined
       date: new Date().toLocaleDateString("en-US"),
   };
 
   setHistoryLog([logEntry, ...historyLog]);
-  localStorage.setItem("historyLog", JSON.stringify([logEntry, ...historyLog]));
+  localStorage.setItem(
+    "historyLog",
+    JSON.stringify([logEntry, ...historyLog])
+  );
+  if (isPaid) {
+    console.log(`Floor Title: ${floorTitle}, Slot ID: ${slotId}`);
+    const slotDocRef = doc(
+      db,
+      "slot",
+      user.managementName,
+      "slotData",
+      `slot_${floorTitle}_${slotId}`
+    );
 
-  if (accepted) {
-      try {
-          console.log(`Floor Title: ${floorTitle}, Slot ID: ${slotId}`);
-          const slotDocRef = doc(db, "slot", user.managementName, "slotData", `slot_${floorTitle}_${slotId}`);
+    await setDoc(
+      slotDocRef,
+      {
+        userDetails: {
+          name: userName,
+          carPlateNumber,
+          slotId,
+          floorTitle,
+          userEmail,
+        },
+        from: "Reservation",
+        reservationId: reservationId,
+        status: "Occupied",
+        timestamp: new Date(),
+        reserveStatus: "Accepted",
+      },
+      { merge: true }
+    );
 
-          await setDoc(slotDocRef, {
-              userDetails: {
-                  name: userName,
-                  carPlateNumber,
-                  slotId,
-                  floorTitle,
-                  userEmail,
-              },
-              from: "Reservation",
-              reservationId: reservationId,
-              status: "Occupied",
-              timestamp: new Date(),
-              reserveStatus: 'Accepted',
-          }, { merge: true });
+    const reservationDocRef = doc(db, "reservations", id);
+    await deleteDoc(reservationDocRef);
+    // Fetch the user token from Firestore
+    if (userEmail) {
+      const userTokenDocRef = doc(db, "userTokens", userEmail);
+      const docSnap = await getDoc(userTokenDocRef);
+      if (docSnap.exists()) {
+        const { token } = docSnap.data();
+        const notificationData = {
+          appId: 24190,
+          appToken: "7xmUkgEHBQtdSvSHDbZ9zd",
+          title: "Reservation",
+          message: `Your reservation at ${
+            user.managementName
+          } on ${floorTitle} ${slotId + 1} is accepted`,
+          targetUsers: [token], // Send to device token
+          subID: userEmail,
+          color: "#FF0000FF",
+        };
+        fetch("https://app.nativenotify.com/api/indie/notification", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${notificationData.appToken}`,
+          },
+          body: JSON.stringify(notificationData),
+        })
+          .then((response) => response.text())
+          .then((text) => {
+            if (text === "Success!") {
+              alert("Notification sent successfully.");
+            } else {
+              try {
+                const data = JSON.parse(text);
 
-          const reservationDocRef = doc(db, "reservations", id);
-          await deleteDoc(reservationDocRef);
-
-          // Fetch the user token from Firestore
-          if (userEmail) {
-              const userTokenDocRef = doc(db, "userTokens", userEmail);
-              const docSnap = await getDoc(userTokenDocRef);
-              if (docSnap.exists()) {
-                  const { token } = docSnap.data();
-                  const notificationData = {
-                      appId: 24190,
-                      appToken: '7xmUkgEHBQtdSvSHDbZ9zd',
-                      title: 'Reservation',
-                      message: `Your reservation at ${user.managementName} on ${floorTitle} ${slotId + 1} is accepted`,
-                      targetUsers: [token], // Send to device token
-                      subID: userEmail,
-                      color: '#FF0000FF'
-                  };
-
-                  console.log("Sending notification with data:", JSON.stringify(notificationData));
-                  fetch('https://app.nativenotify.com/api/indie/notification', {
-                      method: 'POST',
-                      headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${notificationData.appToken}`
-                      },
-                      body: JSON.stringify(notificationData)
-                  })
-                  .then(response => response.text())
-                  .then(text => {
-                      if (text === "Success!") {
-                          console.log('Notification sent successfully:', text);
-                          alert('Notification sent successfully.');
-                      } else {
-                          try {
-                              const data = JSON.parse(text);
-                              console.log('Notification sent:', data);
-                              alert('Notification sent successfully.');
-                          } catch (error) {
-                              console.error('Response received but not in expected format:', text);
-                              alert(`Received unexpected response format. Response was: ${text}`);
-                          }
-                      }
-                  })
-                  .catch(error => {
-                      console.error('Error sending notification:', error);
-                      alert('Failed to send notification. Check the console for more details.');
-                  });
-              } else {
-                  console.error("Error: No device token found for userEmail.");
-                  alert("No device token found for the email.");
+                alert("Notification sent successfully.");
+              } catch (error) {
+                console.error(
+                  "Response received but not in expected format:",
+                  text
+                );
+                alert(
+                  `Received unexpected response format. Response was: ${text}`
+                );
               }
-          } else {
-              console.error("Error: userEmail is null or undefined.");
-              alert("No valid email to send notification.");
-          }
-          console.log(`Reservation accepted for slot ${slotId}.`);
-          alert(`Reservation accepted for ${userName} at slot ${slotId + 1}.`);
+            }
+          })
+          .catch((error) => {
+            console.error("Error sending notification:", error);
+            alert(
+              "Failed to send notification. Check the console for more details."
+            );
+          });
+      } else {
+        console.error("Error: No device token found for userEmail.");
+        alert("No device token found for the email.");
+      }
+    } else {
+      console.error("Error: userEmail is null or undefined.");
+      alert("No valid email to send notification.");
+    }
 
-          // Add a new document to the resStatus collection
-          const resStatusDocRef = doc(collection(db, "resStatus"));
-          await setDoc(resStatusDocRef, {
-              userName,
-              userEmail: userEmail || 'N/A', // Ensure email is not undefined
-              carPlateNumber,
-              slotId,
-              floorTitle,
-              status: "Occupied",
-              reservationId: reservationId,
-              timestamp: new Date(),
-              resStatus: "Accepted",
-              managementName: user.managementName,
-          }, { merge: true });
+    alert(`Reservation accepted for ${userName} at slot ${slotId + 1}.`);
+    // Add a new document to the resStatus collection
+    const resStatusDocRef = doc(collection(db, "resStatus"));
+    await setDoc(
+      resStatusDocRef,
+      {
+        userName,
+        userEmail: userEmail || "N/A", // Ensure email is not undefined
+        carPlateNumber,
+        slotId,
+        floorTitle,
+        status: "Occupied",
+        reservationId: reservationId,
+        timestamp: new Date(),
+        resStatus: "Accepted",
+        managementName: user.managementName,
+      },
+      { merge: true }
+    );
+  } else if (accepted) {
+    try {
+      const q = query(
+        collection(db, "reservations"),
+        where("userEmail", "==", userEmail)
+      );
 
-      } catch (error) {
+      const result = await getDocs(q);
+
+      if (!result.empty) {
+        const docRef = result.docs[0].ref;
+
+        await updateDoc(docRef, { status: "Accepted" });
+
+        alert(`Reservation is approved`);
+        setreservationIsApprove(true);
+      }
+    } catch (error) {
           console.error("Error accepting reservation and updating slotData:", error);
           alert("Failed to accept the reservation. Please try again.");
       }
@@ -571,8 +598,11 @@ const handleReservation = async (accepted, reservationRequest, index) => {
   const updatedRequests = reservationRequests.filter((_, i) => i !== index);
   setReservationRequests(updatedRequests);
 
-  if (accepted) {
-      localStorage.setItem("reservationRequests", JSON.stringify(updatedRequests));
+  if (!isPaid) {
+    localStorage.setItem(
+      "reservationRequests",
+      JSON.stringify(updatedRequests)
+    );
   }
 };
 
@@ -580,23 +610,18 @@ const handleReservation = async (accepted, reservationRequest, index) => {
     const [showNotification, setShowNotification] = useState(false);
 
     const HistoryLog = ({ historyLog }) => {
-        const [showAccepted, setShowAccepted] = useState(false);
-        const [showDeclined, setShowDeclined] = useState(false);
-    
-        const handleClearHistory = () => {
-            localStorage.removeItem("historyLog");
-        };
-        
+      const [showAccepted, setShowAccepted] = useState(false);
+      const [showDeclined, setShowDeclined] = useState(false);
+      const handleClearHistory = () => {
+        localStorage.removeItem("historyLog");
+      };
     };
 
     const ReservationRequest = ({ request, index }) => {
-        const [showMapModal, setShowMapModal] = useState(false);
         const [showImageModal, setShowImageModal] = useState(false);
         const [imageUrl, setImageUrl] = useState("");
 
-        const toggleMapModal = () => {
-          setShowMapModal(!showMapModal);
-        };
+        
 
         const toggleImageModal = () => {
           setShowImageModal(!showImageModal);
@@ -623,54 +648,114 @@ const handleReservation = async (accepted, reservationRequest, index) => {
         <div className="p-2"><strong>Slot Number:</strong> {request.slotId + 1}</div>
       </div>
 
-      {/* Action Buttons */}
-    <div
-      className="d-flex justify-content-end gap-2"
-      style={{ gap: "50px" }}
-    >
-    <Button variant="primary" onClick={toggleMapModal} className="me-4" size="sm">
-            View Map
-      </Button>
-      <Button variant="secondary" onClick={openImageModal} size="sm">
-        View Proof of Payment
-      </Button>
-      <Button
-        variant="success"
-        onClick={() => handleReservation(true, request, index)}
-        size="sm"
-      >
-        Accept Reservation
-      </Button>
-      <Button
-        variant="danger"
-        onClick={() => handleReservation(false, request, index)}
-        size="sm"
-      >
-        Decline Reservation
-      </Button>
-    </div>
-  </div>
-    
-      {/* Map Modal */}
-      <Modal show={showMapModal} onHide={toggleMapModal} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Map</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {request?.location && user.coordinates && (
-            <MapComponent
-              origin={request.location}
-              destination={user.coordinates}
-            />
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={toggleMapModal}>
-            Close
+      <div className="row d-flex justify-content-around">
+            <div className="col-auto">
+            <Button
+              variant="primary"
+              className="me-2"
+              size="sm"
+              onClick={() => {
+                  console.log("Request Data:", request);
+                  toggleMapModal(request);
+              }}
+          >
+              View Map
           </Button>
-        </Modal.Footer>
-      </Modal>
+            </div>
+            <div className="col-auto">
+              <Button
+                variant="secondary"
+                onClick={openImageModal}
+                className="me-4 bg-green-600"
+                size="sm"
+                style={{
+                  borderColor:
+                    request.status === "Approval" ? "#999999" : "#16A34A",
+                  backgroundColor:
+                    request.status === "Approval" ? "#999999" : "#16A34A",
+                }}
+              >
+                {request.status === "Approval"
+                  ? "Waiting for Payment "
+                  : "View Proof of Payment"}
+              </Button>
+            </div>
+            <div className="col-auto">
+              <Button
+                variant="success"
+                onClick={() =>
+                  handleReservation(
+                    true,
+                    request,
+                    index,
+                    request.status === "Approval" ? false : true
+                  )
+                }
+                className="me-4"
+                size="sm"
+                style={{
+                  width: "150px",
+                  borderColor:
+                    request.status !== "Paid" && request.status !== "Approval"
+                      ? "#999999"
+                      : "#16A34A",
+                  backgroundColor:
+                    request.status !== "Paid" && request.status !== "Approval"
+                      ? "#999999"
+                      : "#16A34A",
+                }}
+                disabled={
+                  request.status !== "Paid" && request.status !== "Approval"
+                    ? true
+                    : false
+                }
+              >
+                {reservationIsApprove ? "Paid" : "Approve"}
+              </Button>
+            </div>
+            <div className="col-auto">
+              <Button
+                variant="danger"
+                onClick={() => handleReservation(false, request, index)}
+                size="sm"
+                disabled={request.status === "Paid" ? true : false}
+                style={{
+                  borderColor:
+                    request.status === "Paid" ? "#999999" : "#16A34A",
+                  backgroundColor:
+                    request.status === "Paid" ? "#999999" : "#16A34A",
+                }}
+              >
+                Decline Reservation
+              </Button>
+            </div>
+          </div>
+        </div>
     
+     {/* Map Modal */}
+     <Modal show={mapModal.show} onHide={() => toggleMapModal(null)} centered>
+    <Modal.Header closeButton>
+        <Modal.Title>Map</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+    {mapModal.data?.currentLocation && user?.coordinates ? (
+        <MapComponent
+            origin={mapModal.data.currentLocation} // Correct field here
+            destination={user.coordinates}
+        />
+    ) : (
+        <p>No map data available</p>
+    )}
+</Modal.Body>
+
+    <Modal.Footer>
+        <Button variant="secondary" onClick={() => toggleMapModal(null)}>
+            Close
+        </Button>
+    </Modal.Footer>
+</Modal>
+
+
       {/* Image Modal */}
       <Modal show={showImageModal} onHide={toggleImageModal} centered>
         <Modal.Header closeButton>
@@ -759,26 +844,7 @@ const handleReservation = async (accepted, reservationRequest, index) => {
           </MDBRow>
         </MDBContainer>
 
-        {/* Map Modal */}
-        <Modal show={mapModal.show} onHide={() => toggleMapModal(null)} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>Map</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {mapModal.data?.location && user.coordinates && (
-              <MapComponent
-                origin={mapModal.data.location}
-                destination={user.coordinates}
-              />
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="secondary" onClick={() => toggleMapModal(null)}>
-              Close
-            </Button>
-          </Modal.Footer>
-        </Modal>
-
+       
         {/* Image Modal */}
         <Modal
           show={imageModal.show}
