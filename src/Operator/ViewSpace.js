@@ -437,7 +437,6 @@ useEffect(() => {
   }
 }, [currentSetIndexSecond]);
 
-
 const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
   try {
     const collectionRef = collection(db, "user");
@@ -1111,7 +1110,6 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
   console.log(userDetails?.carPlateNumber);
   console.log("Hello");
 
-
   return (
     <div className="d-flex">
       <div>
@@ -1266,3 +1264,4 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
 };
 
 export default ParkingSlot;
+

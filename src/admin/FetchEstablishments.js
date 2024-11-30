@@ -38,37 +38,42 @@ const FetchEstablishments = () => {
         <hr className="divider" />
         <div className="project-list mt-5 p-3 bg-light rounded" style={{ overflowY: 'scroll', height: '70vh', border: '2px solid #132B4B', boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)' }}>
           {establishments.length > 0 ? (
-            <ul className="list-group"  style={{backgroundColor: 'rgba(19, 43, 75, 0.5)', padding: 10, borderRadius: 20}}>
-              {establishments.map((establishment, index) => (
-                <React.Fragment key={establishment.id}>
-                  <li className="list-group-item d-flex align-items-center"  style={{border: '2px solid #132B4B', borderRadius: 20}}>
-                    <img
-                      src={establishment.profileImageUrl || '/defaultt.png'}
-                      alt={establishment.managementName}
-                      className="rounded-circle mr-3"
-                      style={{ width: '85px'}}
-                    />
-                    <div>
-                      <h5 className="mb-1">
-                        Establishment: <span className="font-weight-bold">{establishment.managementName}</span>
-                      </h5>
-                      <p className="mb-1">
-                        Parking Location: {establishment.companyAddress}
-                      </p>
-                      <p className="mb-0">
-                        Approved on: {establishment.createdAt?.seconds
-                          ? new Date(establishment.createdAt.seconds * 1000).toLocaleDateString()
-                          : 'Date not available'}
-                      </p>
-                    </div>
-                  </li>
-                  {index < establishments.length - 1 && <hr />}
-                </React.Fragment>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-center">No establishments found.</p>
-          )}
+           <table className="table table-striped table-hover">
+           <thead className="thead-dark">
+             <tr>
+               <th scope="col">#</th>
+               <th scope="col">Profile</th>
+               <th scope="col">Establishment</th>
+               <th scope="col">Parking Location</th>
+               <th scope="col">Approval Date</th>
+             </tr>
+           </thead>
+           <tbody>
+             {establishments.map((establishment, index) => (
+               <tr key={establishment.id}>
+                 <th scope="row">{index + 1}</th>
+                 <td>
+                   <img
+                     src={establishment.profileImageUrl || '/defaultt.png'}
+                     alt={establishment.managementName}
+                     className="rounded-circle"
+                     style={{ width: '50px', height: '50px' }}
+                   />
+                 </td>
+                 <td>{establishment.managementName}</td>
+                 <td>{establishment.companyAddress}</td>
+                 <td>
+                   {establishment.createdAt?.seconds
+                     ? new Date(establishment.createdAt.seconds * 1000).toLocaleDateString()
+                     : 'Date not available'}
+                 </td>
+               </tr>
+             ))}
+           </tbody>
+         </table>
+       ) : (
+         <p className="text-center">No establishments found.</p>
+       )}
         </div>
       </div>
     </div>

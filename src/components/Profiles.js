@@ -10,10 +10,9 @@ import { v4 } from "uuid";
 import EstablishmentReserve from "./establishmentReserve";
 import "./profile.css"; 
 
-
 export default function EditButton() {
     const navigate = useNavigate();
-    const { user, setUser  } = useContext(UserContext);
+    const { user } = useContext(UserContext);
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState("");
     const [managementName, setManagementName] = useState("");
@@ -51,7 +50,6 @@ export default function EditButton() {
                         setOpenTime(userData.openTime || "");
                         setCloseTime(userData.closeTime || "");
                         setReservationDuration(userData.reservationDuration || "");
-
                     }
                 } else {
                     console.log("No such document!");
@@ -101,8 +99,8 @@ export default function EditButton() {
                 closeTime: tempCloseTime,
                 parkingPay: parkingPay,
                 profileImageUrl: imageUrl,
-                reservationDuration: reservationDuration         
-                };
+                reservationDuration: reservationDuration 
+            };
 
             // Remove any fields that are empty or undefined
             Object.keys(updatedData).forEach(key => {
@@ -115,17 +113,19 @@ export default function EditButton() {
                 await updateDoc(userDocRef, updatedData);
                 console.log("User data updated/created successfully!");
                 console.log("Updated profile image URL:", imageUrl);
-                // Update UserContext
-            setUser(prev => ({ ...prev, ...updatedData }));
-
-            setIsEditing(false); // Exit edit mode after successful update
-        } catch (error) {
-            console.error("Error updating user data: ", error);
+                setIsEditing(false);  // Exit edit mode after successful update
+            } catch (error) {
+                console.error("Error updating user data: ", error);
+            }
+        } else {
+            console.error("User not authenticated");
         }
-    } else {
-        console.error("User not authenticated");
+    };
+    function convertMinutesToHours(minutes) {
+        return minutes / 60;
     }
-};
+    
+
     const handleSaveProfile = async () => {
         let finalImageUrl = profileImageUrl;
 
@@ -185,15 +185,9 @@ export default function EditButton() {
                                 <div>&nbsp;</div>
 
 
-
                                     <div className="text-center mb-4">
-                                    <MDBCardImage
-              src={profileImageUrl}
-              alt="Profile"
-              className="img-fluid rounded-circle mb-3"
-              style={{ width: '150px', height: '150px', objectFit: 'cover', border: '4px solid #132B4B' }}
-            />
-                                                </div>
+                                        <MDBCardImage src={profileImageUrl || "defaultt.png"} alt="Profile" className="img-thumbnail" style={{ width: "150px", borderRadius: "50%" }} />
+                                    </div>
                                     {isEditing ? (
                                         <>
                                             <div className="mb-3">
@@ -228,9 +222,27 @@ export default function EditButton() {
                                                 <input type="time" className="form-control" value={tempCloseTime} onChange={(e) => setTempCloseTime(e.target.value)} />
                                             </div>
                                             <div className="mb-3">
-                                                <label htmlFor="duration" className="form-label">Reservation Duration (minutes)</label>
-                                                <input type="number" className="form-control" id="duration" value={reservationDuration} onChange={(e) => setReservationDuration(Number(e.target.value))} disabled={!isEditing} />
-                                            </div>
+    <label htmlFor="duration" className="form-label">Reservation Duration (minutes)</label>
+    <input 
+        type="number" 
+        className="form-control" 
+        id="duration" 
+        placeholder="Enter duration in minutes"
+        value={reservationDuration} 
+        onChange={(e) => {
+            const value = Number(e.target.value);
+            if (value >= 0 && Number.isInteger(value)) {
+                setReservationDuration(value);
+            }
+        }} 
+        min="0" // Ensures no negative numbers
+        disabled={!isEditing} 
+    />
+    {reservationDuration < 0 && (
+        <div className="text-danger">Please enter a positive number.</div>
+    )}
+</div>
+
                                             <MDBBtn color="primary" className="me-2" onClick={handleSaveProfile} style={buttonStyles}>
                                                 Save Changes
                                             </MDBBtn>

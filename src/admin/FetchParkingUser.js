@@ -38,30 +38,38 @@ const FetchParkingUsers = () => {
       <hr className="divider" />
       <div className="project-list mt-5 p-3 bg-light rounded" style={{ overflowY: 'scroll', height: '70vh', border: '2px solid #132B4B', boxShadow: '0 0 10px rgba(0, 0, 0, 0.2)' }}>
   {parkingSeeker.length > 0 ? (
-    <ul className="list-group"  style={{backgroundColor: 'rgba(19, 43, 75, 0.5)', padding: 10, borderRadius: 20}}>
+    <table className="table table-striped table-hover">
+    <thead className="thead-dark">
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Profile</th>
+        <th scope="col">Name</th>
+        <th scope="col">Address</th>
+        <th scope="col">Email</th>
+      </tr>
+    </thead>
+    <tbody>
       {parkingSeeker.map((seeker, index) => (
-        <React.Fragment key={seeker.id}>
-          <li className="list-group-item d-flex align-items-center"  style={{border: '2px solid #132B4B', borderRadius: 20}}>
+        <tr key={seeker.id}>
+          <th scope="row">{index + 1}</th>
+          <td>
             <img
               src={seeker.profileImageUrl || '/defaultt.png'}
               alt={seeker.name}
-              className="user-image"
+              className="rounded-circle"
+              style={{ width: '50px', height: '50px' }}
             />
-            <div >
-              <span className="user-name">{seeker.name}</span>
-              <br />
-              <span className="user-info">
-                Address: {seeker.address} | Email: {seeker.email}
-              </span>
-            </div>
-          </li>
-          {index < parkingSeeker.length - 1 && <hr className="horizontal-line" />}
-        </React.Fragment>
+          </td>
+          <td>{seeker.name}</td>
+          <td>{seeker.address}</td>
+          <td>{seeker.email}</td>
+        </tr>
       ))}
-    </ul>
-  ) : (
-    <p>No parking seekers found.</p>
-  )}
+    </tbody>
+  </table>
+) : (
+  <p className="text-center">No parking seekers found.</p>
+)}
         </div>
       </div>
     </div>

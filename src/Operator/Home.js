@@ -151,7 +151,6 @@ function Home() {
           setParkingPay(establishmentData.parkingPay);
           setTotalSlots(establishmentData.totalSlots);
           setReservationDuration(establishmentData.reservationDuration);
-
           const newUser = {
             ...user,
             coordinates: establishmentData.coordinates,
@@ -274,46 +273,47 @@ function Home() {
         </Nav.Link>
       </Nav.Item>
       <div style={dividerStyle}></div> {/* Divider */}
-        <Nav.Item>
-          <Nav.Link eventKey="available" className="custom-tab">
-            Available Parking Spaces
-          </Nav.Link>
-        </Nav.Item>
-        <div style={dividerStyle}></div> {/* Divider */}
-        <Nav.Item>
-          <Nav.Link eventKey="fee" className="custom-tab">
-            Parking Fee
-          </Nav.Link>
-        </Nav.Item>
-        <div style={dividerStyle}></div> {/* Divider */}
-        <Nav.Item className="dropdown">
-          <a
-            className="nav-link custom-tab dropdown-toggle"
-            data-bs-toggle="dropdown"
-            role="button"
-            aria-expanded="false"
-          >
-            More
-          </a>
-          <ul className="dropdown-menu">
-  <li className="dropdown-item-container" data-hover-info="Shows currently occupied parking spaces" >
-    <button className="dropdown-item" onClick={() => handleNavigation('occupied')}>
-      Occupied Spaces
-    </button>
-  </li>
-  <li className="dropdown-item-container" data-hover-info="Shows currently reserved parking spaces">
-    <button className="dropdown-item" onClick={() => handleNavigation('reserved')}>
-      Reserved Spaces
-    </button>
-  </li>
-</ul>
+      <Nav.Item>
+        <Nav.Link
+          eventKey="available"
+          className="custom-tab"
+        >
+          Available Parking Spaces
+        </Nav.Link>
+      </Nav.Item>
+      <div style={dividerStyle}></div> {/* Divider */}
+      <Nav.Item>
+                     
+        <Nav.Link
+          eventKey="fee"
+          className="custom-tab"
+        >
+          Parking Fee
+        </Nav.Link>
+        
+      </Nav.Item>
+      <div style={dividerStyle}></div> {/* Divider */}
 
-        </Nav.Item>
+      <Nav.Item className="dropdown">
+                        <a className="nav-link custom-tab dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
+                          More
+                        </a>
+                        <ul className="dropdown-menu">
+                          <li>
+                            <button className="dropdown-item" onClick={() => handleNavigation('occupied')}>
+                              Occupied Spaces
+                            </button>
+                          </li>
+                          <li>
+                            <button className="dropdown-item" onClick={() => handleNavigation('reserve')}>
+                              Reserved Spaces
+                            </button>
+                          </li>
+                        </ul>
+                      </Nav.Item>
     </Nav>
   </Col>
 </Row>
-
-
 <Row>
   <Col>
     <Tab.Content>
@@ -372,18 +372,13 @@ function Home() {
     </Tab.Content>
   </Col>
 </Row>
-
       </Tab.Container>
-             
             </div>
           </MDBCol>
           <div className="duration">Establishment Reservation Duration: {reservationDuration} minutes</div>
-
         </MDBRow>
       </MDBContainer>
-      
       <hr/>
-
       <div style={chartContainerStyle}>
     <div style={chartCardStyle}>
         <h5>Current Occupancy Rate</h5>
@@ -411,7 +406,7 @@ function Home() {
 
     <div style={chartCardStyle}>
         <h5>Reservation vs. Walk-In</h5>
-        <ResponsiveContainer width={480} height={300}>  
+        <ResponsiveContainer width={430} height={300}>  
             <PieChart>
                 <Pie
                     data={doughnutData}
@@ -435,10 +430,10 @@ function Home() {
     </div>
 </div>
 
-
     </div>
     
   );
 }
 
 export default Home;
+
