@@ -89,7 +89,7 @@ function Home() {
   const handleNavigation = (cardType) => {
     navigate('/OperatorDashboard', { state: { activeCard: cardType } });
   };
-
+  
   useEffect(() => {
     const fetchParkingData = async () => {
       try {
@@ -305,7 +305,7 @@ function Home() {
                             </button>
                           </li>
                           <li>
-                            <button className="dropdown-item" onClick={() => handleNavigation('reserve')}>
+                            <button className="dropdown-item" onClick={() => handleNavigation('reserved')}>
                               Reserved Spaces
                             </button>
                           </li>
