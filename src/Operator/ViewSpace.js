@@ -149,41 +149,37 @@ const [enterPressed, setEnterPressed] = useState(false);
 
     return () => unsubscribe();
   }, [user?.managementName]);
+  const handleNotificationClick = () => {
+    console.log("Notification bell clicked, current state of showNotification:", showNotification);
+    
+    // Toggle the visibility of the notification panel
+    setShowNotification(prevShowNotification => {
+        if (!prevShowNotification) {
+            // Only reset the notification count if the notification panel is currently hidden and will be shown
+            console.log("Setting notification count to 0");
+            setNotificationCount(0);
+        }
+        return !prevShowNotification;
+    });
+};
 
-  const handleNotificationClick = async (notificationId) => {
-    setShowNotification(!showNotification);
-    setNotifications([]);
-    navigate("/Reservation");
-    if (!showNotification) {
-      try {
-        const notificationRef = doc(db, "notifications", notificationId);
-        await deleteDoc(notificationRef);
-        setNotifications(
-          notifications.filter(
-            (notification) => notification.id !== notificationId
-          )
-        );
-      } catch (error) {
-        console.error("Error removing notification:", error);
-      }
-    }
-  };
 
   useEffect(() => {
     let fetchedSlotData = new Map();
     // Fetch slot data
     const fetchSlotData = async () => {
-      const slotDataQuery = query(
-        collection(db, "slot", user.managementName, "slotData")
-      );
+      const slotDataQuery = query(collection(db, "slot", user.managementName, "slotData"));
       const slotDataSnapshot = await getDocs(slotDataQuery);
+      console.log("Slot Data Snapshot:", slotDataSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); // Log the entire snapshot for verification
       slotDataSnapshot.forEach((doc) => {
         fetchedSlotData.set(doc.id, {
           ...doc.data(),
           occupied: doc.data().status === "Occupied",
+          from: doc.data().from || 'Not Specified',
         });
       });
     };
+    
 
     const updateSlots = () => {
       setSlotSets((currentSlotSets) =>
@@ -202,7 +198,8 @@ const [enterPressed, setEnterPressed] = useState(false);
               return {
                 ...slot,
                 occupied: isOccupied,
-                userDetails: isOccupied
+                userDetails: isOccupied,
+                from: slotData ? slotData.from : "Not Specified"
                   ? {
                       // Show carPlateNumber from resData if available, otherwise from slotData
                       carPlateNumber: slotData?.userDetails?.carPlateNumber,
@@ -558,7 +555,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
   const handleAddToSlot = (carPlateNumber, slotIndex) => {
     const slot = slotSets[currentSetIndex].slots[slotIndex];
     if (slot.occupied ) {
-      setErrorMessage("Cannot assign user is already.");
+      setErrorMessage("Cannot assign user is already parked.");
       return;
     }
     if (!carPlateNumber || carPlateNumber.trim() === "") {
@@ -747,16 +744,16 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       <div style={{ marginTop: "20px", marginLeft: "40px" }}>
         <div
           className="notification-bell"
-          onClick={() => {
-            setShowNotification(!showNotification);
-            setNotificationCount(0);
-          }}
+          onClick={handleNotificationClick }
+          //   setShowNotification(!showNotification);
+          //   setNotificationCount(0);
+          // }}
         >
           <FontAwesomeIcon icon={faBell} size="lg" />
-          {notifications.length > 0 && !showNotification && (
-            <span className="badge rounded-pill bg-danger">
-              {notifications.length}
-            </span>
+          {notificationCount > 0 && (
+    <span className="badge rounded-pill bg-danger">
+        {notificationCount}
+    </span>
           )}
         </div>
         {showNotification && (
@@ -777,6 +774,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
           <Nav
           >
             {slotSets.map((slotSet, index) => (
+              
               <Nav.Item
                 key={index}
                 style={{
@@ -816,68 +814,69 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
           <hr className="divider"/>
           {renderSearchForm()}
           <Tab.Content>
-            {slotSets.map((slotSet, index) => (
-              <Tab.Pane eventKey={index} key={index}>
-                <h2
-                  style={{
-                    textAlign: "center",
-                    textTransform: "uppercase",
-                    fontWeight: "bold",
-                    fontSize: "36px",
-                    color: "#132B4B",
-                    marginTop: "40px",
-                    marginBottom: "40px",
-                  }}
-                >
-                  {slotSet.title} Floor{" "}
-                </h2>
-                <div className="parkingContainer">
-                  <div className="parkingGrid">
-                    {slotSet.slots.map((slot, slotIndex) => {
-                      const continuousNumber = getContinuousSlotNumber(
-                        index,
-                        slotIndex
-                      );
-                      
-                      return (
-                        <div
-                          key={slotIndex}
-                          style={{
-                            width: "95px",
-                            height: "100px",
-                            backgroundColor: slot.occupied ? "red" : "green",
-                            color: "white",
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            cursor: "pointer",
-                            margin: "5px",
-                            borderRadius: "15px",
-                            boxShadow: slot.occupied
-                              ? "0 2px 4px #DC143C"
-                              : "0 2px 4px #00ff00",
-                              border: (highlightedFloorIndex === index && highlightedSlot === slotIndex) ? "3px solid yellow" : "",
-                          }}
-                          onClick={() => handleSlotClick(slotIndex)}
-                        >
-                          {slot.occupied ? (
-                            <div>
-                              <div>
-                                {slot.userDetails
-                                  ? slot.userDetails.carPlateNumber
-                                  : continuousNumber}{" "}
-                              </div>
-                            </div>
-                          ) : (
-                            continuousNumber
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </Tab.Pane>
-            ))}
+          {slotSets.map((slotSet, index) => (
+  <Tab.Pane eventKey={index} key={index}>
+    <h2 style={{
+      textAlign: "center",
+      textTransform: "uppercase",
+      fontWeight: "bold",
+      fontSize: "36px",
+      color: "#132B4B",
+      marginTop: "40px",
+      marginBottom: "40px",
+    }}>
+      {slotSet.title} Floor{" "}
+    </h2>
+    <div className="parkingContainer">
+      <div className="parkingGrid">
+        
+      {slotSet.slots.map((slot, slotIndex) => {
+   const determineSlotColor = (slot) => {
+    if (slot.from === "Reservation" && slot.occupied) {
+      return "orange"; // Reserved and occupied slot
+    }
+    if (slot.from === "Reservation" && !slot.occupied) {
+      return "yellow"; // Reserved but not occupied slot
+    }
+    if (slot.occupied) {
+      return "red"; // Occupied but not reserved
+    }
+    return "green"; // Available and not reserved
+  };
+  
+        
+  const continuousNumber = getContinuousSlotNumber(index, slotIndex);
+  const backgroundColor = determineSlotColor(slot);
+  console.log(`Rendered color for slot ${slotIndex}: ${backgroundColor}`);
+  // Apply yellow color for reservation-based slots
+  console.log(`Slot Data: ${JSON.stringify(slot)}`); // 
+  return (
+    <div
+      key={slotIndex}
+      style={{
+        width: "95px",
+        height: "100px",
+        backgroundColor,
+        color: "white",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        cursor: "pointer",
+        margin: "5px",
+        borderRadius: "15px",
+        boxShadow: slot.occupied ? `0 2px 4px ${backgroundColor}` : "0 2px 4px #00ff00",
+      }}
+      onClick={() => handleSlotClick(slotIndex)}
+    >
+      {slot.occupied ? slot.userDetails ? slot.userDetails.carPlateNumber : continuousNumber : continuousNumber }
+    </div>
+  );
+})}
+
+      </div>
+    </div>
+  </Tab.Pane>
+))}
           </Tab.Content>
         </Tab.Container>
       </div>
@@ -1080,21 +1079,32 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
   };
 
   const renderNotifications = () => {
+    const handleDeleteNotification = async (notificationId) => {
+      try {
+        const notificationRef = doc(db, "notifications", notificationId);
+        await deleteDoc(notificationRef);
+        setNotifications(notifications.filter(n => n.id !== notificationId));
+      } catch (error) {
+        console.error("Error deleting notification:", error);
+      }
+    };
+  
     return (
       <table className="notification-table">
         <thead>
           <tr>
-            <th style={{ color: "green" }}>Notifications</th>
+            <th>Notifications</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
           {notifications.map((notification, index) => (
-            <tr
-              key={index}
-              onClick={() => handleNotificationClick(notification)}
-            >
-              <td style={{ color: "black" }}>
+            <tr key={index}>
+              <td>
                 {notification.details} by {notification.userEmail}
+              </td>
+              <td>
+                <button onClick={() => handleDeleteNotification(notification.id)}>Delete</button>
               </td>
             </tr>
           ))}
@@ -1102,7 +1112,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       </table>
     );
   };
-
+  
   useEffect(() => {
     searchInFirebase(userDetails?.carPlateNumber);
   }, [userDetails?.carPlateNumber]);

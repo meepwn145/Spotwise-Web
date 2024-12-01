@@ -354,6 +354,9 @@ const toggleMapModal = (data) => {
     const data = await response.json();
     return data.sub_id; // assuming the response contains `sub_id`
   };
+
+  const [timerId, setTimerId] = useState(null);
+
   const handleReservation = async (
     accepted,
     reservationRequest,
@@ -388,7 +391,40 @@ const toggleMapModal = (data) => {
       "historyLog",
       JSON.stringify([logEntry, ...historyLog])
     );
+    
     if (accepted && !isPaid) {
+
+      const notificationData = {
+        appId: 24190,
+        appToken: "7xmUkgEHBQtdSvSHDbZ9zd",
+        title: "Reservation Approved",
+        message: `Your reservation at ${user.managementName} on ${floorTitle} Slot ${slotId + 1} has been approved. Please upload a proof of payment before expiration`,
+        targetUsers: [userEmail],
+        color: "#16A34A",
+        subID: userEmail,
+      };
+    
+      fetch("https://app.nativenotify.com/api/indie/notification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${notificationData.appToken}`,
+        },
+        body: JSON.stringify(notificationData),
+      })
+        .then((response) => response.text())
+        .then((text) => {
+          if (text === "Success!") {
+            console.log("Approval notification sent successfully.");
+          } else {
+            console.error("Unexpected response for approval notification:", text);
+          }
+        })
+        .catch((error) => {
+          console.error("Error sending approval notification:", error);
+        });
+
+        
       const duration = reservationRequest.reservationDuration * 60000; // Convert minutes to milliseconds
       const endTime = Date.now() + duration;
 
@@ -402,18 +438,59 @@ const toggleMapModal = (data) => {
           clearInterval(interval);
           const reservationRef = doc(db, "reservations", id);
           const snap = await getDoc(reservationRef);
-          if (snap.exists() && snap.data().status === "Accepted" && !snap.data().imageUri) {
+          if (snap.exists()) {
+            console.log("Reservation data before expiration check:", snap.data()); // Log full document data
+            const imageUri = snap.data().imageUri;
+            console.log("imageUri value:", imageUri); // Log the specific field
+            console.log("Status value:", snap.data().status);
+          
+          }
+          if (snap.exists() && snap.data().status === "Accepted" && (!snap.data().imageUri || snap.data().imageUri.trim() === "")) {
             await deleteDoc(reservationRef);
             console.log(`Reservation ${id} expired and was deleted due to no proof of payment.`);
-          } else {
-            console.log(`No action needed for reservation ${id}. Proof of payment was provided or status changed.`);
-          }
+          }   const notificationData = {
+      appId: 24190,
+      appToken: "7xmUkgEHBQtdSvSHDbZ9zd",
+      title: "Reservation Expired",
+      message: `Your reservation at ${user.managementName} on ${floorTitle} Slot ${slotId + 1} has expired.`,
+      targetUsers: [userEmail],
+      color: "#FF0000",
+      subID: userEmail,
+    };
+
+    fetch("https://app.nativenotify.com/api/indie/notification", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${notificationData.appToken}`,
+      },
+      body: JSON.stringify(notificationData),
+    })
+      .then((response) => response.text())
+      .then((text) => {
+        if (text === "Success!") {
+          console.log("Expiration notification sent successfully.");
+        } else {
+          console.error("Unexpected response for expiration notification:", text);
         }
+      })
+      .catch((error) => {
+        console.error("Error sending expiration notification:", error);
+      });
+  } else {
+    console.log(`No action needed for reservation ${id}.`);
+  }
       }, 1000);
+      setTimerId(interval); 
     }
+    
     
     if (isPaid) {
       console.log(`Floor Title: ${floorTitle}, Slot ID: ${slotId}`);
+      if (timerId) {
+        clearInterval(timerId);
+        setTimerId(null);
+      }
       const slotDocRef = doc(
         db,
         "slot",
