@@ -17,6 +17,8 @@ import "./AdminPage.css";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import AdminSide from './adminside';
+import { getFunctions, httpsCallable } from "firebase/functions";
+
 
 function AdminPage() {
 	const [pendingAccounts, setPendingAccounts] = useState([]);
@@ -24,6 +26,8 @@ function AdminPage() {
 	const [summaryCardsData, setSummaryCardsData] = useState([]);
 	const [parkingSeeker, setParkingSeeker] = useState([]);
 	const [agent, setAgent] = useState([]);
+
+	
 	const MainContent = styled.div`
 		margin: auto;
 		margin-top: 10vh;
@@ -128,6 +132,13 @@ function AdminPage() {
 	const DeclineButton = styled(Button)`
 		background-color: #dc3545;
 	`;
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+	
+	  };
+
+	  
 	useEffect(() => {
 		const fetchParkingUsers = async () => {
 			try {
@@ -234,12 +245,12 @@ function AdminPage() {
 			const user = userCredential.user;
 	
 			// Add to 'establishments' collection
-			await setDoc(doc(db, "establishments", user.uid), {
+			await setDoc(doc(db, "establishments", user.email), {
 				...accountData,
 				createdAt: new Date(),
 				isApproved: true,
 			});
-	
+			
 			// Remove from pending accounts
 			await deleteDoc(doc(db, "pendingEstablishments", id));
 	

@@ -196,15 +196,14 @@ function OperatorDashboard() {
   useEffect(() => {
     setSummaryCardsData([
    
-      { 
-        title: 'Occupied Spaces', 
+      {  
         value: `${occupiedSpaces} Occupied Spaces`,
         imgSrc: 'occupied.png', 
         cardType: 'occupied', 
         clickable: true 
       },
       { 
-        title: 'Reserve Spaces', 
+        
         value: `${reservedSpaces} Reserved Spaces`,
         imgSrc: 'reservedP.png', 
         cardType: 'reserve', 
@@ -254,7 +253,7 @@ function OperatorDashboard() {
       case 'reserve':
         return (
           <div style={styles.reserveSection}>
-            <div style={styles.sectionHeader}><FaRegListAlt style={styles.icon} /> Reserved Slots</div>
+            <div style={styles.sectionHeader}><FaRegListAlt style={styles.icon} /> OccupiedSpaced from Reservation</div>
             <table className="table align-middle mb-0 bg-white">
               <thead className="bg-light">
                 <tr>
@@ -335,14 +334,14 @@ function OperatorDashboard() {
         alt={tab.charAt(0).toUpperCase() + tab.slice(1)}
         style={{ width: 30, height: 30, borderRadius: '50%' }}
       />
-      <span>{tab === 'occupied' ? 'Occupied Spaces' : 'Reserved Spaces'}</span>
+      <span>{tab === 'occupied' ? 'Occupied Spaces' : 'Occupied by Reservation'}</span>
     </div>
   ))}
 </div>
   
             {activeTab === 'occupied' && (
-              <div>
-                <h3>Occupied Spaces</h3>
+              <div style={{marginTop:"50px"}}>
+               
                 <table class="table table-striped table-hover table-bordered">
                   <thead className="bg-light">
                     <tr>
@@ -371,8 +370,8 @@ function OperatorDashboard() {
             )}
   
             {activeTab === 'reserved' && (
-              <div>
-                <h3>Reserved Spaces</h3>
+              <div style={{marginTop: "50px"}}>
+             
                 <table class="table table-striped table-hover table-bordered">
                   <thead className="bg-light">
                     <tr>

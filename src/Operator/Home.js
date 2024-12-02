@@ -306,7 +306,7 @@ function Home() {
                           </li>
                           <li>
                             <button className="dropdown-item" onClick={() => handleNavigation('reserve')}>
-                              Reserved Spaces
+                            Occupied by Reservation
                             </button>
                           </li>
                         </ul>
