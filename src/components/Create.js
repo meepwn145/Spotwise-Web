@@ -25,6 +25,7 @@ function Create() {
 	const [selectedFiles, setSelectedFiles] = useState([]);
 	const [coordinates, setCoordinates] = useState({ lat: null, lng: null });
 	const [geolocationAvailable, setGeolocationAvailable] = useState(true);
+	const [reservationDuration, setReservationDuration] = useState("");
 	const navigate = useNavigate();
 
 	const { coords, isGeolocationAvailable, isGeolocationEnabled } = useGeolocated({
@@ -88,7 +89,7 @@ function Create() {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
-		if (!managementName || !companyAddress || !email || !password || !contact || !parkingPay) {
+		if (!managementName || !companyAddress || !email || !password || !contact || !parkingPay || !reservationDuration) {
 			alert("Please fill out all fields.");
 			return;
 		}
@@ -138,6 +139,7 @@ function Create() {
 				floorDetails,
 				totalSlots,
 				isApproved: false,
+				reservationDuration,
 				fileURLs,
 				coordinates: {
 					lat: coordinates.lat,
@@ -328,6 +330,16 @@ function Create() {
 								placeholder="Parking Payment"
 								value={parkingPay}
 								onChange={(e) => setParkingPayment(e.target.value)}
+								required
+								style={inputStyle}
+							/>
+						</div>
+						<div style={inputGroupStyle}>
+							<input
+								type="text"
+								placeholder="Reservation Duration (in minute/s)"
+								value={reservationDuration}
+								onChange={(e) => setReservationDuration(e.target.value)}
 								required
 								style={inputStyle}
 							/>

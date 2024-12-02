@@ -831,51 +831,49 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       <div className="parkingGrid">
         
       {slotSet.slots.map((slot, slotIndex) => {
-   const determineSlotColor = (slot) => {
-    if (slot.from === "Reservation" && slot.occupied) {
-      return "orange"; // Reserved and occupied slot
-    }
-    if (slot.from === "Reservation" && !slot.occupied) {
-      return "yellow"; // Reserved but not occupied slot
-    }
-    if (slot.occupied) {
-      return "red"; // Occupied but not reserved
-    }
-    return "green"; // Available and not reserved
-  };
-  
-        
-  const continuousNumber = getContinuousSlotNumber(index, slotIndex);
-  const backgroundColor = determineSlotColor(slot);
-  console.log(`Rendered color for slot ${slotIndex}: ${backgroundColor}`);
-  // Apply yellow color for reservation-based slots
-  console.log(`Slot Data: ${JSON.stringify(slot)}`); // 
-  return (
-    <div
-      key={slotIndex}
-      style={{
-        width: "95px",
-        height: "100px",
-        backgroundColor,
-        color: "white",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        cursor: "pointer",
-        margin: "5px",
-        borderRadius: "15px",
-        boxShadow: slot.occupied ? `0 2px 4px ${backgroundColor}` : "0 2px 4px #00ff00",
-      }}
-      onClick={() => handleSlotClick(slotIndex)}
-    >
-      {slot.occupied ? slot.userDetails ? slot.userDetails.carPlateNumber : continuousNumber : continuousNumber }
-    </div>
-  );
-})}
-
-      </div>
-    </div>
-  </Tab.Pane>
+                      const continuousNumber = getContinuousSlotNumber(
+                        index,
+                        slotIndex
+                      );
+                      const backgroundColor = slot.occupied ? (slot.from === 'Reservation' ? 'blue' : 'red') : 'green';
+                      return (
+                        <div
+                          key={slotIndex}
+                          style={{
+                            width: "95px",
+                            height: "100px",
+                            backgroundColor: backgroundColor,
+                            color: "white",
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            margin: "5px",
+                            borderRadius: "15px",
+                            boxShadow: slot.occupied
+                              ? "0 2px 4px #DC143C"
+                              : "0 2px 4px #00ff00",
+                              border: (highlightedFloorIndex === index && highlightedSlot === slotIndex) ? "3px solid yellow" : "",
+                          }}
+                          onClick={() => handleSlotClick(slotIndex)}
+                        >
+                          {slot.occupied ? (
+                            <div>
+                              <div>
+                                {slot.userDetails
+                                  ? slot.userDetails.carPlateNumber
+                                  : continuousNumber}{" "}
+                              </div>
+                            </div>
+                          ) : (
+                            continuousNumber
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Tab.Pane>
 ))}
           </Tab.Content>
         </Tab.Container>

@@ -333,7 +333,7 @@ const doughnutData = total > 0
                 clickable: true
             },
             {
-                title: 'Reserved Spaces',
+                title: 'Occupied by Reservation',
                 imgSrc: 'reservedP.png',
                 cardType: 'reserve',
                 clickable: true
@@ -362,7 +362,7 @@ const doughnutData = total > 0
             case 'occupied':
                 return (
                     <div style={styles.occupiedSection}>
-                        <div style={styles.sectionHeader}><FaCar style={styles.icon} /> Occupied Slots</div>
+                    
                         <table class="table table-striped table-hover table-bordered">
                             <thead className="bg-light">
                                 <tr>
@@ -392,7 +392,6 @@ const doughnutData = total > 0
             case 'reserve':
                 return (
                     <div style={styles.reserveSection}>
-                        <div style={styles.sectionHeader}><FaRegListAlt style={styles.icon} /> Reserved Slots</div>
                         <table class="table table-striped table-hover table-bordered">
                             <thead className="bg-light">
                                 <tr>

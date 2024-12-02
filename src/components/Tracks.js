@@ -292,8 +292,8 @@ const App = () => {
                 </div>
 
                 <Container style={{ marginTop: '15vh' }}>
-                    <h2 style={{ fontSize: 50, margin: 'auto' }}>Management Details Page</h2>
-                    <hr className="divider" style={{ color: '#132B4B' }} />
+                    <h2 style={{ fontSize: 50, marginTop: '10px' }}>Management Details Page</h2>
+                    <hr className="divider" style={{ color: '#132B4B', marginBottom: '40px' }} />
                     <Button
                     onClick={handleShowOperatorManagement}
                     style={{
