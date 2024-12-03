@@ -27,6 +27,9 @@
 .parkingSlot.occupied {
   background-color: red; /* occupied slot color */
 }
+.parkingSlot.reserved {
+  background-color: blue; /* Color for reserved slots */
+}
 .parkingContainer {
   display: flex;
   justify-content: center;
