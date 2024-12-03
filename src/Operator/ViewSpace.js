@@ -71,6 +71,8 @@ const [enterPressed, setEnterPressed] = useState(false);
     return available + slotSet.slots.filter((slot) => !slot.occupied).length;
   }, 0);
 
+  const [showImageUploadModal, setShowImageUploadModal] = useState(false);
+  const [uploadedByEmail, setUploadedByEmail] = useState("");
   const saveSlotsToLocalStorage = (managementName, slots) => {
     try {
       localStorage.setItem(`slotSets_${managementName}`, JSON.stringify(slots));
@@ -79,6 +81,104 @@ const [enterPressed, setEnterPressed] = useState(false);
       console.error("Error saving slots to local storage:", error);
     }
   };
+  const [processedReservations, setProcessedReservations] = useState(new Set());
+
+useEffect(() => {
+  const unsubscribe = onSnapshot(
+    query(
+      collection(db, "reservations"),
+      where("status", "==", "Paid"),
+      where("managementName", "==", user.managementName)
+    ),
+    (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added" || change.type === "modified") {
+          const reservationData = change.doc.data();
+          const reservationId = change.doc.id;
+
+          // Check if this reservation has already been processed
+          if (processedReservations.has(reservationId)) {
+            return;
+          }
+
+          const now = new Date();
+          const lastNotified = reservationData.lastNotified
+            ? new Date(reservationData.lastNotified.seconds * 1000)
+            : null;
+
+          if (
+            reservationData.imageUri &&
+            reservationData.imageUri !== "" &&
+            (!lastNotified || now - lastNotified > 60000) // 1 minute interval
+          ) {
+            setUploadedByEmail(reservationData.userEmail);
+            setShowImageUploadModal(true);
+
+            // Update the `lastNotified` field in Firestore
+            setDoc(
+              doc(db, "reservations", reservationId),
+              {
+                lastNotified: serverTimestamp(),
+              },
+              { merge: true }
+            );
+
+            // Add the reservation to the processed set
+            setProcessedReservations((prevProcessed) => {
+              const newProcessed = new Set(prevProcessed);
+              newProcessed.add(reservationId);
+              return newProcessed;
+            });
+          }
+        }
+      });
+    }
+  );
+
+  return () => unsubscribe();
+}, [user?.managementName, processedReservations]);
+
+const [showNewReservationModal, setShowNewReservationModal] = useState(false);
+const [newReservationDetails, setNewReservationDetails] = useState({});
+
+useEffect(() => {
+  const unsubscribe = onSnapshot(
+    query(
+      collection(db, "reservations"),
+      where("status", "==", "Approval"), // Only listen for reservations with status "Approval"
+      where("managementName", "==", user.managementName)
+    ),
+    (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const reservationData = change.doc.data();
+
+          // Display the new reservation modal if the status is "Approval"
+          if (reservationData.status === "Approval") {
+            setNewReservationDetails(reservationData);
+            setShowNewReservationModal(true);
+          }
+        }
+      });
+    }
+  );
+
+  return () => unsubscribe();
+}, [user?.managementName]);
+
+
+const handleCloseNewReservationModal = () => {
+  setShowNewReservationModal(false);
+  navigate("/Reservation"); // Navigate to the Reservation page if desired
+};
+
+
+  const handleCloseImageUploadModal = () => {
+    setShowImageUploadModal(false);
+    setUploadedByEmail(""); 
+    navigate("/Reservation");// Clear the email when closing
+  };
+  
 
   const loadSlotsFromLocalStorage = (managementName) => {
     try {
@@ -448,7 +548,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
 
     const { found, floorIndex, slotIndex } = findPlateAcrossFloors(searchInput);
     if (user) {
-      console.log("Second Input - Found user:", user.data());
+      console.log("Found user:", user.data());
       setUserPlateNumberSecond(user.data().carPlateNumber || searchInput);
       setUserDetailsSecond(user.data());
       setUserFoundSecond(true);
@@ -459,12 +559,12 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
         setHighlightedFloorIndex(floorIndex); // Ensure highlighting is set
         setHighlightedSlot(slotIndex);
         const floorName = slotSets[floorIndex].title;
-        alert(`Second Input - Car found at ${floorName}, Slot Number ${slotIndex + 1}`);
+        alert(`Car found at ${floorName}, Slot Number ${slotIndex + 1}`);
       } else {
-        alert("Second Input - Car is registered but currently not parked.");
+        alert("Car is registered but currently not parked.");
       }
     } else {
-      console.log("Second Input - User not found.");
+      console.log("User not found.");
       setUserDetailsSecond({ carPlateNumber: searchInput });
       setUserPlateNumberSecond(searchInput);
       setUserFoundSecond(false);
@@ -474,14 +574,14 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
         setHighlightedFloorIndex(floorIndex);
         setHighlightedSlot(slotIndex);
         const floorName = slotSets[floorIndex].title;
-        alert(`Second Input - Car is not registered but found on ${floorName}, Slot Number ${slotIndex + 1}`);
+        alert(`Car is not registered but found on ${floorName}, Slot Number ${slotIndex + 1}`);
       } else if (showAlert) {
-        alert("Second Input - Car is not registered and currently not parked.");
+        alert("Car is not registered and currently not parked.");
       }
     }
     setShowButtonsSecond(true); // Show Assign and Exit buttons regardless of search outcome
   } catch (error) {
-    console.error("Second Input - Error:", error);
+    console.error("Error:", error);
     setShowButtonsSecond(false);
   }
 };
@@ -552,6 +652,13 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     setUserPlateNumber(input);
   };
 
+  const getContinuousSlotNumber = (floorIndex, slotIndex) => {
+    let totalPreviousSlots = 0;
+    for (let i = 0; i < floorIndex; i++) {
+      totalPreviousSlots += slotSets[i].slots.length;
+    }
+    return totalPreviousSlots + slotIndex + 1;
+  };
   const handleAddToSlot = (carPlateNumber, slotIndex) => {
     const slot = slotSets[currentSetIndex].slots[slotIndex];
     if (slot.occupied ) {
@@ -591,6 +698,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       );
       return;
     }
+    const continuousSlotNumber = getContinuousSlotNumber(currentSetIndex, slotIndex);
     const floorTitle = slotSets[currentSetIndex].title || "General Parking";
     const uniqueElement = new Date().getTime(); // Using timestamp for uniqueness
     const uniqueSlotId = `${floorTitle}-${slotIndex}-${uniqueElement}`;
@@ -614,6 +722,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       agent: fullName,
       floorTitle,
       timestamp,
+      slotNumber: continuousSlotNumber,
     };
 
     updatedSets[currentSetIndex].slots[slotIndex] = {
@@ -636,6 +745,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       status: "Occupied",
       slotId: uniqueSlotId,
       userDetails: updatedUserDetails,
+      slotNumber: continuousSlotNumber, 
     };
 
     setDoc(slotDocRef, slotUpdate, { merge: true })
@@ -1127,7 +1237,36 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
           <div style={{ flex: 1, padding: "10px" }}>
             {slotSets.length > 0 ? renderFloorTabs() : <p>Loading floors...</p>}
           </div>
-          
+          <Modal show={showImageUploadModal} onHide={handleCloseImageUploadModal}>
+            <Modal.Header closeButton>
+              <Modal.Title>Image Uploaded</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              User {uploadedByEmail} has uploaded an image for their reservation.
+            </Modal.Body>
+            <Modal.Footer>
+              <Button variant="secondary" onClick={handleCloseImageUploadModal}>
+                OK
+              </Button>
+            </Modal.Footer>
+          </Modal>
+
+          <Modal show={showNewReservationModal} onHide={handleCloseNewReservationModal}>
+  <Modal.Header closeButton>
+    <Modal.Title>New Reservation Placed</Modal.Title>
+  </Modal.Header>
+  <Modal.Body>
+    A new reservation has been placed by {newReservationDetails.userEmail}.
+    <br />
+    Status: {newReservationDetails.status}
+  </Modal.Body>
+  <Modal.Footer>
+    <Button variant="secondary" onClick={handleCloseNewReservationModal}>
+      OK
+    </Button>
+  </Modal.Footer>
+</Modal>
+
 
           <Modal show={showModal} onHide={handleCloseModal}>
             <Modal.Header closeButton>
