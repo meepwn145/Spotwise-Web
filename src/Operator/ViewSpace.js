@@ -82,7 +82,45 @@ const [enterPressed, setEnterPressed] = useState(false);
     }
   };
   const [processedReservations, setProcessedReservations] = useState(new Set());
-
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "slot", user.managementName, "slotData"),
+      (snapshot) => {
+        const fetchedSlotData = new Map();
+        snapshot.forEach((doc) => {
+          fetchedSlotData.set(doc.id, {
+            ...doc.data(),
+            occupied: doc.data().status === "Occupied",
+            from: doc.data().from || 'Not Specified',  // Ensure 'from' is included
+          });
+        });
+        
+        // Now, update the local state with fetched slot data
+        setSlotSets((currentSlotSets) =>
+          currentSlotSets.map((slotSet) => {
+            return {
+              ...slotSet,
+              slots: slotSet.slots.map((slot, index) => {
+                const slotId = `slot_${slotSet.title}_${index}`;
+                const slotData = fetchedSlotData.get(slotId);
+                const isOccupied = slotData && slotData.occupied;
+                return {
+                  ...slot,
+                  occupied: isOccupied,
+                  from: slotData ? slotData.from : "Not Specified",  // Update 'from' correctly
+                  userDetails: slotData ? slotData.userDetails : undefined,
+                };
+              }),
+            };
+          })
+        );
+      }
+    );
+  
+    return () => unsubscribe();
+  }, [user?.managementName]);
+  
+  
 useEffect(() => {
   const unsubscribe = onSnapshot(
     query(
@@ -520,7 +558,7 @@ const handleCloseNewReservationModal = () => {
     }
   };
   
-  
+
 
   const [userDetailsSecond, setUserDetailsSecond] = useState({});
 const [userPlateNumberSecond, setUserPlateNumberSecond] = useState("");
@@ -730,6 +768,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       occupied: true,
       timestamp: timestamp,
       userDetails: updatedUserDetails,
+      from: "reservation" // Ensure reservation status is marked
     };
 
     setSlotSets(updatedSets);
@@ -746,6 +785,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       slotId: uniqueSlotId,
       userDetails: updatedUserDetails,
       slotNumber: continuousSlotNumber, 
+      from: "reservation" 
     };
 
     setDoc(slotDocRef, slotUpdate, { merge: true })
@@ -939,48 +979,56 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     </h2>
     <div className="parkingContainer">
       <div className="parkingGrid">
-        
       {slotSet.slots.map((slot, slotIndex) => {
-                      const continuousNumber = getContinuousSlotNumber(
-                        index,
-                        slotIndex
-                      );
-                      const backgroundColor = slot.occupied ? (slot.from === 'Reservation' ? 'blue' : 'red') : 'green';
-                      return (
-                        <div
-                          key={slotIndex}
-                          style={{
-                            width: "95px",
-                            height: "100px",
-                            backgroundColor: backgroundColor,
-                            color: "white",
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                            cursor: "pointer",
-                            margin: "5px",
-                            borderRadius: "15px",
-                            boxShadow: slot.occupied
-                              ? "0 2px 4px #DC143C"
-                              : "0 2px 4px #00ff00",
-                              border: (highlightedFloorIndex === index && highlightedSlot === slotIndex) ? "3px solid yellow" : "",
-                          }}
-                          onClick={() => handleSlotClick(slotIndex)}
-                        >
-                          {slot.occupied ? (
-                            <div>
-                              <div>
-                                {slot.userDetails
-                                  ? slot.userDetails.carPlateNumber
-                                  : continuousNumber}{" "}
-                              </div>
-                            </div>
-                          ) : (
-                            continuousNumber
-                          )}
-                        </div>
-                      );
-                    })}
+          const continuousNumber = getContinuousSlotNumber(index, slotIndex);
+          let backgroundColor = 'green'; // Default color for available slots
+        
+          if (slot.occupied) {
+            if (slot.from && slot.from.trim().toLowerCase() === "reservation") {
+              backgroundColor = 'blue';
+              console.log(`Slot ${continuousNumber} is from a Reservation. Setting color to blue.`);
+            } else {
+              backgroundColor = 'red';
+              console.log(`Slot ${continuousNumber} is occupied (not a Reservation). Setting color to red.`);
+            }
+          } else {
+            console.log(`Slot ${continuousNumber} is available. Setting color to green.`);
+          }
+          
+
+
+  return (
+    <div
+      key={slotIndex}
+      style={{
+        width: "95px",
+        height: "100px",
+        backgroundColor: backgroundColor,
+        color: "white",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        cursor: "pointer",
+        margin: "5px",
+        borderRadius: "15px",
+        boxShadow: slot.occupied ? "0 2px 4px #DC143C" : "0 2px 4px #00ff00",
+        border: (highlightedFloorIndex === index && highlightedSlot === slotIndex) ? "3px solid yellow" : "",
+      }}
+      onClick={() => handleSlotClick(slotIndex)}
+    >
+      {slot.occupied ? (
+        <div>
+          <div>
+            {slot.userDetails ? slot.userDetails.carPlateNumber : continuousNumber}
+          </div>
+        </div>
+      ) : (
+        continuousNumber
+      )}
+    </div>
+  );
+})}
+
                   </div>
                 </div>
               </Tab.Pane>
@@ -1237,7 +1285,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
           <div style={{ flex: 1, padding: "10px" }}>
             {slotSets.length > 0 ? renderFloorTabs() : <p>Loading floors...</p>}
           </div>
-          <Modal show={showImageUploadModal} onHide={handleCloseImageUploadModal}>
+          {/* <Modal show={showImageUploadModal} onHide={handleCloseImageUploadModal}>
             <Modal.Header closeButton>
               <Modal.Title>Image Uploaded</Modal.Title>
             </Modal.Header>
@@ -1265,7 +1313,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       OK
     </Button>
   </Modal.Footer>
-</Modal>
+</Modal> */}
 
 
           <Modal show={showModal} onHide={handleCloseModal}>
