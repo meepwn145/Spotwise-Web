@@ -305,7 +305,7 @@ function Home() {
                             </button>
                           </li>
                           <li>
-                            <button className="dropdown-item" onClick={() => handleNavigation('reserve')}>
+                            <button className="dropdown-item" onClick={() => handleNavigation('reserved')}>
                             Occupied by Reservation
                             </button>
                           </li>

@@ -374,98 +374,80 @@ const toggleMapModal = (data) => {
       userEmail,
       reservationId,
       slotNumber,
-      newReservationDetails, 
     } = reservationRequest;
-    if (accepted) {
-      // Reference to the slot collection
-      const slotRef = doc(db, "slot", user.managementName, "slotData", `slot_${floorTitle}_${slotId}`);
-      const slotSnap = await getDoc(slotRef);
-  
-      // Check if the slot data exists and handle if not
-      if (!slotSnap.exists()) {
-        console.error("Slot does not exist.");
-        alert("Slot does not exist.");
-        return; // Exit the function if the slot does not exist
-      }
-  
-      const slotData = slotSnap.data();
-  
-      // Check if the slot is already occupied
-      if (slotData.status === 'Occupied') {
-        alert("This slot is already occupied.");
-        return; // Exit the function if the slot is occupied
-      }
-    }
-  
-    const status = accepted ? "Accepted" : "Declined";
-
-    const logEntry = {
-      status,
-      name: userName,
-      carPlateNumber,
-      slotId,
-      timeOfRequest,
-      email: userEmail || "N/A",
-      date: new Date().toLocaleDateString("en-US"),
-    };
-
-    setHistoryLog([logEntry, ...historyLog]);
-    localStorage.setItem(
-      "historyLog",
-      JSON.stringify([logEntry, ...historyLog])
-    );
-    
     if (accepted && !isPaid) {
-      // Notification for reservation approval
-      const notificationData = {
-        appId: 24190,
-        appToken: "7xmUkgEHBQtdSvSHDbZ9zd",
-        title: "Reservation Approved",
-        message: `Your reservation at ${user.managementName} on ${floorTitle} Slot ${slotId + 1} has been approved. Please upload a proof of payment before expiration`,
-        targetUsers: [userEmail],
-        color: "#16A34A",
-        subID: userEmail,
-      };
-    
-      fetch("https://app.nativenotify.com/api/indie/notification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${notificationData.appToken}`,
-        },
-        body: JSON.stringify(notificationData),
-      })
-        .then((response) => response.text())
-        .then((text) => {
-          if (text === "Success!") {
-            console.log("Approval notification sent successfully.");
+      // Check if the slot is occupied
+      const slotRef = doc(db, "slot", user.managementName, "slotData", `slot_${floorTitle}_${slotId}`);
+      console.log("Checking slotRef path:", `slot_${floorTitle}_${slotId}`);
+  
+      try {
+        const slotSnap = await getDoc(slotRef);
+        if (slotSnap.exists()) {
+          const slotData = slotSnap.data();
+          if (slotData.status === 'Occupied') {
+            console.error("Slot is already occupied. Document path: ", `slot_${floorTitle}_${slotId}`);
+            alert("This slot is already occupied.");
+            return; // Exit the function if the slot is occupied
           } else {
-            console.error("Unexpected response for approval notification:", text);
+            console.log("Slot is not occupied, proceeding to accept the reservation.");
           }
-        })
-        .catch((error) => {
-          console.error("Error sending approval notification:", error);
-        });
-    
-      // Timer setup
+        } else {
+          console.log("Slot data does not exist, proceeding to accept reservation.");
+        }
+      } catch (error) {
+        console.error("Error checking slot status:", error);
+        return; // Exit the function if there's an error fetching slot data
+      }
+      const notificationData = {
+              appId: 24190,
+              appToken: "7xmUkgEHBQtdSvSHDbZ9zd",
+              title: "Reservation Approved",
+              message: `Your reservation at ${user.managementName} on ${floorTitle} Slot ${slotId + 1} has been approved. Please upload a proof of payment before expiration`,
+              targetUsers: [userEmail],
+              color: "#16A34A",
+              subID: userEmail,
+            };
+          
+            fetch("https://app.nativenotify.com/api/indie/notification", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${notificationData.appToken}`,
+              },
+              body: JSON.stringify(notificationData),
+            })
+              .then((response) => response.text())
+              .then((text) => {
+                if (text === "Success!") {
+                  console.log("Approval notification sent successfully.");
+                } else {
+                  console.error("Unexpected response for approval notification:", text);
+                }
+              })
+              .catch((error) => {
+                console.error("Error sending approval notification:", error);
+              });
+      
+  
+      // Set up the timer for reservation expiration if proof of payment is not provided
       const duration = reservationRequest.reservationDuration * 60000; // Convert minutes to milliseconds
       const endTime = Date.now() + duration;
-    
+  
       const interval = setInterval(async () => {
         const now = Date.now();
         const timeLeft = Math.max(endTime - now, 0);
-    
+  
         console.log(`Time remaining for reservation ${id}: ${Math.floor(timeLeft / 1000)} seconds`);
-    
+  
         if (timeLeft <= 0) {
           clearInterval(interval);
-          // Fetch the latest reservation data to check if conditions for deletion are met
           const reservationRef = doc(db, "reservations", id);
           const snap = await getDoc(reservationRef);
+  
           if (snap.exists() && snap.data().status === "Accepted" && (!snap.data().imageUri || snap.data().imageUri.trim() === "")) {
             await deleteDoc(reservationRef);
             console.log(`Reservation ${id} expired and was deleted due to no proof of payment.`);
-    
+  
             // Send expiration notification
             const expirationNotificationData = {
               appId: 24190,
@@ -476,7 +458,7 @@ const toggleMapModal = (data) => {
               color: "#FF0000",
               subID: userEmail,
             };
-    
+  
             fetch("https://app.nativenotify.com/api/indie/notification", {
               method: "POST",
               headers: {
@@ -497,13 +479,121 @@ const toggleMapModal = (data) => {
                 console.error("Error sending expiration notification:", error);
               });
           } else {
-            console.log(`No action needed for reservation ${id}.`);
+            console.log(`No action needed for reservation ${id}. It has either been paid or is no longer in an 'Accepted' state.`);
           }
         }
       }, 1000);
-      setTimerId(interval);
+  
+      setTimerId(interval); // Set the timer ID to the state
     }
+    const status = accepted ? "Accepted" : "Declined";
+
+    const logEntry = {
+      status,
+      name: userName,
+      carPlateNumber,
+      slotId,
+      timeOfRequest,
+      email: userEmail || "N/A",
+      date: new Date().toLocaleDateString("en-US"),
+    };
+
+    setHistoryLog([logEntry, ...historyLog]);
+    localStorage.setItem(
+      "historyLog",
+      JSON.stringify([logEntry, ...historyLog])
+    );
     
+  //   if (accepted && !isPaid) {
+  //     const notificationData = {
+  //       appId: 24190,
+  //       appToken: "7xmUkgEHBQtdSvSHDbZ9zd",
+  //       title: "Reservation Approved",
+  //       message: `Your reservation at ${user.managementName} on ${floorTitle} Slot ${slotId + 1} has been approved. Please upload a proof of payment before expiration`,
+  //       targetUsers: [userEmail],
+  //       color: "#16A34A",
+  //       subID: userEmail,
+  //     };
+    
+  //     fetch("https://app.nativenotify.com/api/indie/notification", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Authorization: `Bearer ${notificationData.appToken}`,
+  //       },
+  //       body: JSON.stringify(notificationData),
+  //     })
+  //       .then((response) => response.text())
+  //       .then((text) => {
+  //         if (text === "Success!") {
+  //           console.log("Approval notification sent successfully.");
+  //         } else {
+  //           console.error("Unexpected response for approval notification:", text);
+  //         }
+  //       })
+  //       .catch((error) => {
+  //         console.error("Error sending approval notification:", error);
+  //       });
+
+        
+  //     const duration = reservationRequest.reservationDuration * 60000; // Convert minutes to milliseconds
+  //     const endTime = Date.now() + duration;
+
+  //     const interval = setInterval(async () => {
+  //       const now = Date.now();
+  //       const timeLeft = Math.max(endTime - now, 0);
+  
+  //       console.log(`Time remaining for reservation ${id}: ${Math.floor(timeLeft / 1000)} seconds`);
+
+  //       if (timeLeft <= 0) {
+  //         clearInterval(interval);
+  //         const reservationRef = doc(db, "reservations", id);
+  //         const snap = await getDoc(reservationRef);
+  //         if (snap.exists()) {
+  //           console.log("Reservation data before expiration check:", snap.data()); // Log full document data
+  //           const imageUri = snap.data().imageUri;
+  //           console.log("imageUri value:", imageUri); // Log the specific field
+  //           console.log("Status value:", snap.data().status);
+          
+  //         }
+  //         if (snap.exists() && snap.data().status === "Accepted" && (!snap.data().imageUri || snap.data().imageUri.trim() === "")) {
+  //           await deleteDoc(reservationRef);
+  //           console.log(`Reservation ${id} expired and was deleted due to no proof of payment.`);
+  //         }   const notificationData = {
+  //     appId: 24190,
+  //     appToken: "7xmUkgEHBQtdSvSHDbZ9zd",
+  //     title: "Reservation Expired",
+  //     message: `Your reservation at ${user.managementName} on ${floorTitle} Slot ${slotId + 1} has expired.`,
+  //     targetUsers: [userEmail],
+  //     color: "#FF0000",
+  //     subID: userEmail,
+  //   };
+
+  //   fetch("https://app.nativenotify.com/api/indie/notification", {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //       Authorization: `Bearer ${notificationData.appToken}`,
+  //     },
+  //     body: JSON.stringify(notificationData),
+  //   })
+  //     .then((response) => response.text())
+  //     .then((text) => {
+  //       if (text === "Success!") {
+  //         console.log("Expiration notification sent successfully.");
+  //       } else {
+  //         console.error("Unexpected response for expiration notification:", text);
+  //       }
+  //     })
+  //     .catch((error) => {
+  //       console.error("Error sending expiration notification:", error);
+  //     });
+  // } else {
+  //   console.log(`No action needed for reservation ${id}.`);
+  // }
+  //     }, 1000);
+  //     setTimerId(interval); 
+  //   }
     
     
     if (isPaid) {
@@ -551,7 +641,7 @@ const toggleMapModal = (data) => {
           const notificationData = {
             appId: 24190,
             appToken: "7xmUkgEHBQtdSvSHDbZ9zd",
-            title: "Reservation",
+            title: "Reservation Approved",
             message: `Your reservation at ${
               user.managementName
             } on ${floorTitle} ${slotId + 1} is accepted`,
@@ -678,7 +768,7 @@ const toggleMapModal = (data) => {
             const notificationData = {
               appId: 24190,
               appToken: "7xmUkgEHBQtdSvSHDbZ9zd",
-              title: "Reservation",
+              title: "Reservation Declined",
               message: `Your reservation at ${
                 user.managementName
               } on ${floorTitle} ${slotId + 1} was declined`,
@@ -874,7 +964,7 @@ const toggleMapModal = (data) => {
               {request.floorTitle}
             </div>
             <div className="col-2 py-3 d-flex justify-content-center align-items-center">
-              {request.slotId + 1}
+              {request.slotNumber}
             </div>
           </div>
 
@@ -958,7 +1048,7 @@ const toggleMapModal = (data) => {
       ? "Expired"
       : reservationIsApprove
       ? "Paid"
-      : "Approve Reservation"}
+      : "Approve"}
   </Button>
 </div>
             <div className="col-auto">
@@ -966,7 +1056,6 @@ const toggleMapModal = (data) => {
                 variant="danger"
                 onClick={() => handleReservation(false, request, index)}
                 size="sm"
-                disabled={false} 
                 style={{
                   borderColor:
                     request.status === "Paid" ? "#ff0000" : "#ff0000",
