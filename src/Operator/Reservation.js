@@ -850,7 +850,8 @@ const toggleMapModal = (data) => {
           reservationId: reservationId,
           status: "Occupied",
           timestamp: new Date(),
-          reserveStatus: "Accepted"
+          reserveStatus: "Accepted",
+          allocatedTimeForArrival:reservationRequest.allocatedTimeForArrival,
         },
         { merge: true }
       );

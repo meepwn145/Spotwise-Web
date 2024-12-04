@@ -26,12 +26,19 @@ function Create() {
 	const [coordinates, setCoordinates] = useState({ lat: null, lng: null });
 	const [geolocationAvailable, setGeolocationAvailable] = useState(true);
 	const [reservationDuration, setReservationDuration] = useState("");
+	const [allocatedTimeForArrival, setAllocatedTimeForArrival] = useState("");
+	const [hourType, setHourType] = useState("Fixed");
+	const [continuousParkingFee, setContinuousParkingFee] = useState("");
 	const navigate = useNavigate();
 
 	const { coords, isGeolocationAvailable, isGeolocationEnabled } = useGeolocated({
 		positionOptions: { enableHighAccuracy: false },
 		userDecisionTimeout: 5000,
 	});
+	const toggleHourType = () => {
+        // Toggle between "Fixed" and "Continuous"
+        setHourType(hourType === "Fixed" ? "Continuous" : "Fixed");
+    };
 
 	useEffect(() => {
 		setGeolocationAvailable(isGeolocationAvailable);
@@ -140,6 +147,9 @@ function Create() {
 				totalSlots,
 				isApproved: false,
 				reservationDuration,
+				allocatedTimeForArrival,
+				hourType, 
+				continuousParkingFee,
 				fileURLs,
 				coordinates: {
 					lat: coordinates.lat,
@@ -245,6 +255,13 @@ function Create() {
 		color: "#333",
 		marginBottom: "20px",
 	};
+	const radioGroupStyle = {
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        gap: "20px", // Add space between the radio buttons
+    };
 
 	return (
 		<div>
@@ -345,6 +362,16 @@ function Create() {
 							/>
 						</div>
 						<div style={inputGroupStyle}>
+                        <input
+                            type="text"
+                            placeholder="Allocated Time for Arrival (in minutes)"
+                            value={allocatedTimeForArrival}
+                            onChange={(e) => setAllocatedTimeForArrival(e.target.value)}
+                            required
+                            style={inputStyle}
+                        />
+                    </div>
+						<div style={inputGroupStyle}>
 							<label htmlFor="documentUpload">Please upload your BIR Document</label>
 							<input
 								type="file"
@@ -405,6 +432,39 @@ function Create() {
 								/>
 							</div>
 						))}
+					 <div style={radioGroupStyle}>
+                                <input
+                                    type="radio"
+                                    id="fixedHours"
+                                    name="hourType"
+                                    value="Fixed"
+                                    checked={hourType === "Fixed"}
+                                    onChange={() => setHourType("Fixed")}
+                                />
+                                <label htmlFor="fixedHours">Fixed Hours</label>
+
+                                <input
+                                    type="radio"
+                                    id="continuousHours"
+                                    name="hourType"
+                                    value="Continuous"
+                                    checked={hourType === "Continuous"}
+                                    onChange={() => setHourType("Continuous")}
+                                />
+                                <label htmlFor="continuousHours">Continuous Hours</label>
+                            </div>
+                            {hourType === "Continuous" && (
+                                <div style={inputGroupStyle}>
+                                    <input
+                                        type="text"
+                                        placeholder="Continuous Hours Parking Fee"
+                                        value={continuousParkingFee}
+                                        onChange={(e) => setContinuousParkingFee(e.target.value)}
+                                        required
+                                        style={inputStyle}
+                                    />
+                                </div>
+                            )}
 				</div>
 			</div>
 		</div>

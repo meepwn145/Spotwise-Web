@@ -29,12 +29,18 @@ export default function EditButton() {
     const [tempOpenTime, setTempOpenTime] = useState("");
     const [tempCloseTime, setTempCloseTime] = useState("");
     const [reservationDuration, setReservationDuration] = useState(""); // duration in minutes
-
     const userDocRef = auth.currentUser ? doc(db, "establishments", auth.currentUser.uid) : null;
+    const [hourType, setHourType] = useState("");  // State to hold hour type from Firebase
+    const [continuousHourFee, setContinuousHourFee] = useState("");
+    const [fixedHourFee, setFixedHourFee] = useState("");
+    const [allocatedTimeForArrival, setAllocatedTimeForArrival] = useState("");
+    console.log("Current user UID:", auth.currentUser ? auth.currentUser.email : "No user logged in");
 
     useEffect(() => {
         const fetchUserDetails = async () => {
-            if (userDocRef) {
+            if (auth.currentUser && auth.currentUser.email) {
+                const email = auth.currentUser.email;
+                const userDocRef = doc(db, "establishments", email);
                 const docSnap = await getDoc(userDocRef);
                 if (docSnap.exists()) {
                     const userData = docSnap.data();
@@ -45,12 +51,16 @@ export default function EditButton() {
                     setCompanyContact(userData.contact || user.contact || "");
                     setCompanyEmail(userData.email || user.email || "");
                     setParkingPay(userData.parkingPay || user.parkingPay || "");
-                    // Update only if they haven't been edited yet
-                    if (!isEditing) {
-                        setOpenTime(userData.openTime || "");
-                        setCloseTime(userData.closeTime || "");
-                        setReservationDuration(userData.reservationDuration || "");
-                    }
+                    setHourType(userData.hourType || user.hourType || "");
+                    setReservationDuration(userData.reservationDuration || user.reservationDuration || "");
+                    setAllocatedTimeForArrival(userData.allocatedTimeForArrival || "");
+                    console.log("Hour Type:", userData.hourType);
+                if (userData.hourType === "Continuous") {
+                    setContinuousHourFee(userData.continuousParkingFee || ""); // Fetch and set continuous fee
+                } else if (userData.hourType === "Fixed") {
+                    setFixedHourFee(userData.fixedParkingFee || ""); // Optionally fetch and set fixed fee
+                }
+                    // Set other fields similarly
                 } else {
                     console.log("No such document!");
                 }
@@ -99,7 +109,10 @@ export default function EditButton() {
                 closeTime: tempCloseTime,
                 parkingPay: parkingPay,
                 profileImageUrl: imageUrl,
-                reservationDuration: reservationDuration 
+                reservationDuration: reservationDuration,
+                hourType: hourType, // Preserve the fetched hour type
+                continuousParkingFee: hourType === "Continuous" ? continuousHourFee : undefined,
+                fixedParkingFee: hourType === "Fixed" ? fixedHourFee : undefined
             };
 
             // Remove any fields that are empty or undefined
@@ -241,6 +254,44 @@ export default function EditButton() {
     {reservationDuration < 0 && (
         <div className="text-danger">Please enter a positive number.</div>
     )}
+    {hourType === "Continuous" && (
+    <div className="mb-3">
+        <label htmlFor="continuousHourFee" className="form-label">Continuous Hours Fee</label>
+        <input
+            id="continuousHourFee"
+            type="text"
+            className="form-control"
+            placeholder="Enter Continuous Hours Fee"
+            value={continuousHourFee}
+            onChange={(e) => setContinuousHourFee(e.target.value)}
+        />
+    </div>
+)}
+<div className="mb-3">
+    <label htmlFor="allocatedTime" className="form-label">Allocated Time For Arrival</label>
+    <input
+        id="allocatedTime"
+        type="text"
+        className="form-control"
+        placeholder="Enter Allocated Time For Arrival"
+        value={allocatedTimeForArrival}
+        onChange={(e) => setAllocatedTimeForArrival(e.target.value)}
+    />
+</div>
+
+{hourType === "Fixed" && (
+    <div className="mb-3">
+        <label htmlFor="fixedHourFee" className="form-label">Fixed Hours Fee</label>
+        <input
+            id="fixedHourFee"
+            type="text"
+            className="form-control"
+            placeholder="Enter Fixed Hours Fee"
+            value={parkingPay} // Assuming you have this state
+            onChange={(e) => setFixedHourFee(e.target.value)}
+        />
+    </div>
+)}
 </div>
 
                                             <MDBBtn color="primary" className="me-2" onClick={handleSaveProfile} style={buttonStyles}>
@@ -259,7 +310,9 @@ export default function EditButton() {
                                             <p className="card-text mb-1"><strong>Contact Number:</strong> {companyContact}</p>
                                             <p className="card-text mb-1"><strong>Open Time:</strong> {openTime || "Not Set"}</p>
                                             <p className="card-text mb-1"><strong>Close Time:</strong> {closeTime || "Not Set"}</p>
-                                            <p className="card-text mb-1"><strong>Reservation Duration:</strong> {reservationDuration || "Not Set"}</p>
+                                            <p className="card-text mb-1"><strong>Reservation Duration:</strong> {reservationDuration || "Not Set"} minute(s)</p>
+                                            <p className="card-text mb-1"><strong>Parking Type: </strong> {hourType || "Not Set"}</p>
+                                            <p className="card-text mb-1"><strong>Allocated Time for Arrival: </strong> {allocatedTimeForArrival || "Not Set"} minute(s)</p>
                                             <div>&nbsp;</div>
                                             <div>&nbsp;</div>
                                             <MDBBtn

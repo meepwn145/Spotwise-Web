@@ -306,6 +306,7 @@ useEffect(() => {
     const fetchSlotData = async () => {
       const slotDataQuery = query(collection(db, "slot", user.managementName, "slotData"));
       const slotDataSnapshot = await getDocs(slotDataQuery);
+      let fetchedSlotData = new Map(); 
       console.log("Slot Data Snapshot:", slotDataSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); // Log the entire snapshot for verification
       slotDataSnapshot.forEach((doc) => {
         fetchedSlotData.set(doc.id, {
@@ -315,7 +316,7 @@ useEffect(() => {
         });
       });
     };
-    
+        
 
     const updateSlots = () => {
       setSlotSets((currentSlotSets) =>
@@ -1069,6 +1070,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     setShowArrivedButton(false);
   }
   };
+
   const handleArrived = (slotIndex) => {
     // Update the local state to reflect that the slot is now occupied
     const updatedSets = [...slotSets];
