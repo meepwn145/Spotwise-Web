@@ -202,18 +202,16 @@ useEffect(() => {
   return () => unsubscribe();
 }, [user?.managementName]);
 
+ const handleCloseNewReservationModal = () => {
+   setShowNewReservationModal(false);
+   navigate("/Reservation"); // Navigate to the Reservation page if desired
+ };
 
-// const handleCloseNewReservationModal = () => {
-//   setShowNewReservationModal(false);
-//   navigate("/Reservation"); // Navigate to the Reservation page if desired
-// };
 
-
-//   const handleCloseImageUploadModal = () => {
-//     setShowImageUploadModal(false);
-//     setUploadedByEmail(""); 
-//     navigate("/Reservation");// Clear the email when closing
-//   };
+   const handleCloseImageUploadModal = () => {
+     setShowImageUploadModal(false);
+     setUploadedByEmail(""); 
+   };
   
 
   const loadSlotsFromLocalStorage = (managementName) => {
@@ -1334,7 +1332,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
           <div style={{ flex: 1, padding: "10px" }}>
             {slotSets.length > 0 ? renderFloorTabs() : <p>Loading floors...</p>}
           </div>
-          {/* <Modal show={showImageUploadModal} onHide={handleCloseImageUploadModal}>
+           <Modal show={showImageUploadModal} onHide={handleCloseImageUploadModal}>
             <Modal.Header closeButton>
               <Modal.Title>Image Uploaded</Modal.Title>
             </Modal.Header>
@@ -1348,21 +1346,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
             </Modal.Footer>
           </Modal>
 
-          <Modal show={showNewReservationModal} onHide={handleCloseNewReservationModal}>
-  <Modal.Header closeButton>
-    <Modal.Title>New Reservation Placed</Modal.Title>
-  </Modal.Header>
-  <Modal.Body>
-    A new reservation has been placed by {newReservationDetails.userEmail}.
-    <br />
-    Status: {newReservationDetails.status}
-  </Modal.Body>
-  <Modal.Footer>
-    <Button variant="secondary" onClick={handleCloseNewReservationModal}>
-      OK
-    </Button>
-  </Modal.Footer>
-</Modal> */}
+         
 
 
           <Modal show={showModal} onHide={handleCloseModal}>
