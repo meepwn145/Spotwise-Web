@@ -18,6 +18,7 @@ import { Link } from "react-router-dom";
 import styled from "styled-components";
 import AdminSide from './adminside';
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { Modal, Button } from "react-bootstrap";
 
 
 function AdminPage() {
@@ -26,7 +27,18 @@ function AdminPage() {
 	const [summaryCardsData, setSummaryCardsData] = useState([]);
 	const [parkingSeeker, setParkingSeeker] = useState([]);
 	const [agent, setAgent] = useState([]);
+	const [documentURL, setDocumentURL] = useState(null);
+	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [showModal, setShowModal] = useState(false);
 
+
+	
+	const handleViewDocument = (fileURLs) => {
+		if (fileURLs && fileURLs.length > 0) {
+			setDocumentURL(fileURLs[0]);
+			setShowModal(true);
+		}
+	};
 	
 	const MainContent = styled.div`
 		margin: auto;
@@ -289,8 +301,10 @@ function AdminPage() {
 	return (
 		<div className="admin-dashboard">
 			<AdminSide />
-			<div className="main-content" style={{ padding: "20px" }}>
-				<h3>Pending Establishment Accounts</h3>
+			<div className="main-content" style={{ padding: "20px"}}>
+				<h3 style = {{ marginBottom: "100px", textAlign: "center" }}>Pending Establishment Accounts</h3>
+		
+	
 				{pendingAccounts.length === 0 ? (
 					<p style={{ textAlign: "center", marginTop: "20px", fontSize: "16px", color: "#555" }}>
 						No pending establishment accounts.
@@ -318,24 +332,49 @@ function AdminPage() {
 									<td>{account.numberOfFloors}</td>
 									<td>{account.totalSlots}</td>
 									<td>
-										<button
-											onClick={() => handleApprove(account)}
-											className="approve-button"
-										>
-											Approve
-										</button>
-										<button
-											onClick={() => handleDecline(account.id)}
-											className="decline-button"
-										>
-											Decline
-										</button>
-									</td>
+									<button
+										onClick={() => handleApprove(account)}
+										className="btn btn-success mx-1"
+									>
+										Approve
+									</button>
+									<button
+										onClick={() => handleDecline(account.id)}
+										className="btn btn-danger mx-1"
+									>
+										Decline
+									</button>
+									<button
+										onClick={() => handleViewDocument(account.fileURLs)}
+										className="btn btn-primary mx-1"
+									>
+										View Document
+									</button>
+								</td>
+
 								</tr>
 							))}
 						</tbody>
 					</table>
 				)}
+				<Modal show={showModal} onHide={() => setShowModal(false)}>
+					<Modal.Header closeButton>
+						<Modal.Title>View Document</Modal.Title>
+					</Modal.Header>
+					<Modal.Body>
+						{documentURL ? (
+							<img src={documentURL} alt="BIR Document" style={{ width: "100%" }} />
+						) : (
+							<p>No document available.</p>
+						)}
+					</Modal.Body>
+					<Modal.Footer>
+						<Button variant="secondary" onClick={() => setShowModal(false)}>
+							Close
+						</Button>
+					</Modal.Footer>
+				</Modal>
+
 			</div>
 		</div>
 	);

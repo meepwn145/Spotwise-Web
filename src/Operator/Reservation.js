@@ -49,7 +49,17 @@ const Reservation = () => {
   const [endDate, setEndDate] = useState(null);
   const [activeTab, setActiveTab] = useState("reservation");
   const [mapModal, setMapModal] = useState({ show: false, data: null });
-
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const toggleImageModal = () => {
+    setShowImageModal(!showImageModal);
+  };
+  
+  const openImageModal = (url) => {
+    setImageUrl(url);
+    toggleImageModal();
+  };
+  
   useEffect(() => {
     console.log("Map Modal Data:", mapModal.data);
     console.log("User Coordinates:", user?.coordinates);
@@ -92,97 +102,312 @@ const toggleMapModal = (data) => {
   }, []);
 
   const renderTabContent = () => {
+    
     switch (activeTab) {
       case "reservation":
         if (reservationRequests.length === 0) {
           return <p className="text-center mt-4">No pending Reservation.</p>;
         }
-        return reservationRequests.map((request, index) => (
-          <ReservationRequest key={index} request={request} index={index} />
-        ));
-      case "accepted":
         return (
-          <div>
-            <h6 className="mt-3">Filter by Date</h6>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "20px",
-              }}
-            >
-              <div style={{ marginRight: "30px" }}>
-                <label>Start Date:&nbsp;</label>
-                <DatePicker
-                  selected={startDate}
-                  onChange={(date) => setStartDate(date)}
-                  dateFormat="yyyy/MM/dd"
-                  isClearable
-                />
-              </div>
-              <div>
-                <label>End Date:&nbsp;</label>
-                <DatePicker
-                  selected={endDate}
-                  onChange={(date) => setEndDate(date)}
-                  dateFormat="yyyy/MM/dd"
-                  isClearable
-                />
-              </div>
-            </div>
-            {historyLog
-              .filter((log) => log.status === "Accepted" && filterByDate(log))
-              .map((log, index) => (
-                <div className="alert alert-success mt-2" key={index}>
-                  {log.name} - Accepted on {log.date}
-                </div>
+          
+          <table className="table table-striped table-bordered" style={{ width: "100%" }}>
+            <thead className="thead-light">
+          <tr>
+            <th style={{ minWidth: "150px", textAlign: "center" }}>Email</th>
+            <th style={{ minWidth: "150px", whiteSpace: "nowrap", textAlign: "center" }}>
+              Time of Requested
+            </th>
+            <th style={{ minWidth: "150px", whiteSpace: "nowrap", textAlign: "center" }}>
+              Plate Number
+            </th>
+            <th style={{ minWidth: "100px", textAlign: "center" }}>Floor</th>
+            <th style={{ minWidth: "150px", whiteSpace: "nowrap", textAlign: "center" }}>
+              Slot Number
+            </th>
+            <th style={{ minWidth: "200px", textAlign: "center" }}>Actions</th>
+          </tr>
+            </thead>
+            <tbody>
+              {reservationRequests.map((request, index) => (
+                <tr key={index}>
+                  <td>{request.userEmail}</td>
+                  <td>
+                    {new Date(request.timestamp.seconds * 1000).toLocaleTimeString(
+                      "en-US",
+                      {
+                        hour12: true,
+                        hour: "numeric",
+                        minute: "numeric",
+                      }
+                    )}
+                  </td>
+                  <td>{request.carPlateNumber}</td>
+                  <td>{request.floorTitle}</td>
+                  <td>{request.slotNumber}</td>
+                  <td>
+                    <div className="d-flex justify-content-start gap-2">
+                    <Button
+                    variant="primary"
+                    className="me-2"
+                    size="sm"
+                    onClick={() => {
+                      console.log("Request Data:", request);
+                      toggleMapModal(request);
+                    }}
+                  >
+                    View Map
+                  </Button>
+  
+                      {/* Waiting for Payment / View Proof of Payment */}
+                      <Button
+                        variant="secondary"
+                        onClick={() => openImageModal(request.imageUri)} // Pass the URL here
+                        className="me-4 bg-green-600"
+                        size="sm"
+                        style={{
+                          borderColor:
+                            request.status === "Approval" ||
+                            request.status === "Expired"
+                              ? "#999999"
+                              : "#16A34A",
+                          backgroundColor:
+                            request.status === "Approval" ||
+                            request.status === "Expired"
+                              ? "#999999"
+                              : "#16A34A",
+                        }}
+                        disabled={
+                          request.status === "Approval" ||
+                          request.status === "Expired"
+                        }
+                      >
+                        {request.status === "Approval"
+                          ? "Waiting for Payment"
+                          : request.status === "Expired"
+                          ? "Expired"
+                          : "View Proof of Payment"}
+                      </Button>
+  
+                      {/* Approve */}
+                      <Button
+                        variant="success"
+                        onClick={() =>
+                          handleReservation(
+                            true,
+                            request,
+                            index,
+                            request.status === "Approval" ? false : true
+                          )
+                        }
+                        className="me-4"
+                        size="sm"
+                        style={{
+                          width: "120px",
+                          borderColor:
+                            request.status !== "Paid" &&
+                            request.status !== "Approval" &&
+                            request.status !== "Expired"
+                              ? "#999999"
+                              : "#16A34A",
+                          backgroundColor:
+                            request.status !== "Paid" &&
+                            request.status !== "Approval" &&
+                            request.status !== "Expired"
+                              ? "#999999"
+                              : "#16A34A",
+                        }}
+                        disabled={
+                          request.status !== "Paid" &&
+                          request.status !== "Approval" &&
+                          request.status !== "Expired"
+                            ? true
+                            : false
+                        }
+                      >
+                        {request.status === "Expired"
+                          ? "Expired"
+                          : reservationIsApprove
+                          ? "Paid"
+                          : "Approve"}
+                      </Button>
+  
+                      {/* Decline Reservation */}
+                      <Button
+                        variant="danger"
+                        onClick={() => handleReservation(false, request, index)}
+                        size="sm"
+                        style={{
+                          borderColor: "#ff0000",
+                          backgroundColor: "#ff0000",
+                        }}
+                      >
+                        Decline Reservation
+                      </Button>
+                       {/* Map Modal */}
+        <Modal show={mapModal.show} onHide={() => toggleMapModal(null)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>Map</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {mapModal.data?.currentLocation && user?.coordinates ? (
+              <MapComponent
+              origin={mapModal.data.currentLocation} // Correct field here
+              destination={user.coordinates}
+              />
+            ) : (
+              <p>No map data available</p>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => toggleMapModal(null)}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
+    
+        {/* Image Modal */}
+        <Modal show={showImageModal} onHide={toggleImageModal} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>Proof of Payment</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt="Reservation Image"
+                style={{ width: "100%", height: "auto" }}
+              />
+            ) : (
+              <p>Loading image...</p>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={toggleImageModal}>
+              Close
+            </Button>
+          </Modal.Footer>
+        </Modal>
+                    </div>
+                  </td>
+                </tr>
               ))}
-          </div>
+            </tbody>
+          </table>
         );
-      case "declined":
-        return (
-          <div>
-            <h6 className="mt-3">Filter by Date</h6>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "20px",
-              }}
-            >
-              <div style={{ marginRight: "30px" }}>
-                <label>Start Date:&nbsp;</label>
-                <DatePicker
-                  selected={startDate}
-                  onChange={(date) => setStartDate(date)}
-                  dateFormat="yyyy/MM/dd"
-                  isClearable
-                />
-              </div>
-              <div>
-                <label>End Date:&nbsp;</label>
-                <DatePicker
-                  selected={endDate}
-                  onChange={(date) => setEndDate(date)}
-                  dateFormat="yyyy/MM/dd"
-                  isClearable
-                />
-              </div>
-            </div>
-            {historyLog
-              .filter((log) => log.status === "Declined" && filterByDate(log))
-              .map((log, index) => (
-                <div className="alert alert-danger mt-2" key={index}>
-                  {log.name} - Declined on {log.date}
+        case "accepted":
+          return (
+            <div>
+              <h6 className="mt-3">Filter by Date</h6>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "20px",
+                }}
+              >
+                <div style={{ marginRight: "30px" }}>
+                  <label>Start Date:&nbsp;</label>
+                  <DatePicker
+                    selected={startDate}
+                    onChange={(date) => setStartDate(date)}
+                    dateFormat="yyyy/MM/dd"
+                    isClearable
+                  />
                 </div>
-              ))}
-          </div>
-        );
+                <div>
+                  <label>End Date:&nbsp;</label>
+                  <DatePicker
+                    selected={endDate}
+                    onChange={(date) => setEndDate(date)}
+                    dateFormat="yyyy/MM/dd"
+                    isClearable
+                  />
+                </div>
+              </div>
+              <table className="table table-striped">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyLog
+                    .filter((log) => log.status === "Accepted" && filterByDate(log))
+                    .map((log, index) => (
+                      <tr key={index}>
+                        <td>{index + 1}</td>
+                        <td>{log.name}</td>
+                        <td>{log.status}</td>
+                        <td>{log.date}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        case "declined":
+          return (
+            <div>
+              <h6 className="mt-3">Filter by Date</h6>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "20px",
+                }}
+              >
+                <div style={{ marginRight: "30px" }}>
+                  <label>Start Date:&nbsp;</label>
+                  <DatePicker
+                    selected={startDate}
+                    onChange={(date) => setStartDate(date)}
+                    dateFormat="yyyy/MM/dd"
+                    isClearable
+                  />
+                </div>
+                <div>
+                  <label>End Date:&nbsp;</label>
+                  <DatePicker
+                    selected={endDate}
+                    onChange={(date) => setEndDate(date)}
+                    dateFormat="yyyy/MM/dd"
+                    isClearable
+                  />
+                </div>
+              </div>
+              <table className="table table-striped">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyLog
+                    .filter((log) => log.status === "Declined" && filterByDate(log))
+                    .map((log, index) => (
+                      <tr key={index}>
+                        <td>{index + 1}</td>
+                        <td>{log.name}</td>
+                        <td>{log.status}</td>
+                        <td>{log.date}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        
       default:
         return null;
     }
   };
-
+  
   const fetchReservations = async (managementName) => {
     // console.log("Fetching reservations for managementName:", managementName);
     // const q = query(
@@ -625,7 +850,7 @@ const toggleMapModal = (data) => {
           reservationId: reservationId,
           status: "Occupied",
           timestamp: new Date(),
-          reserveStatus: "Accepted",
+          reserveStatus: "Accepted"
         },
         { merge: true }
       );
@@ -855,42 +1080,7 @@ const toggleMapModal = (data) => {
     const [imageUrl, setImageUrl] = useState("");
     const [timeLeft, setTimeLeft] = useState(null);
 
-    // useEffect(() => {
-    //   if (request.status === "Accepted" && request.reservationDuration) {
-    //     const duration = request.reservationDuration * 60 * 1000; // Convert minutes to milliseconds
-    //     const endTime = Date.now() + duration;
-
-    //     const timer = setInterval(() => {
-    //       const now = Date.now();
-    //       const timeLeft = Math.max(endTime - now, 0);
-    //       setTimeLeft(timeLeft);
-
-    //       console.log(`Time remaining for reservation ${request.id}: ${Math.floor(timeLeft / 1000)} seconds`);
-
-    //       if (timeLeft <= 0) {
-    //         clearInterval(timer);
-    //         checkAndDeleteReservation(request);
-    //       }
-    //     }, 1000);
-
-    //     return () => clearInterval(timer);
-    //   }
-    // }, [request]);
-
-    // const checkAndDeleteReservation = async (reservationRequest) => {
-    //   const reservationRef = doc(db, "reservations", reservationRequest.id);
-    //   try {
-    //     const reservationSnap = await getDoc(reservationRef);
-    //     if (reservationSnap.exists() && !reservationSnap.data().imageUri && reservationSnap.data().status === "Accepted") {
-    //       await deleteDoc(reservationRef);
-    //       console.log(`Reservation ${reservationRequest.id} cancelled due to no proof of payment.`);
-    //     } else {
-    //       console.log(`No action needed for reservation ${reservationRequest.id}.`);
-    //     }
-    //   } catch (error) {
-    //     console.error(`Failed to delete reservation ${reservationRequest.id}: `, error);
-    //   }
-    // };
+    
 
     const toggleImageModal = () => {
       setShowImageModal(!showImageModal);
@@ -907,250 +1097,29 @@ const toggleMapModal = (data) => {
         style={{ maxWidth: "100%" }}
         key={request.userEmail}
       >
-        {/* Headers */}
-        {/* <div className="d-flex justify-content-between mb-2 text-muted">
-          <div className="p-2">
-            <strong>Name</strong>
-          </div>
-          <div className="p-2">
-            <strong>Time of Request</strong>
-          </div>
-          <div className="p-2">
-            <strong>Plate Number</strong>
-          </div>
-          <div className="p-2">
-            <strong>Floor</strong>
-          </div>
-          <div className="p-2">
-            <strong>Slot Number</strong>
-          </div>
-        </div> */}
-
-        <div class="">
-          <div className="row text-muted">
-            <div className="col-2 d-flex justify-content-center align-items-center">
-              <strong>Email</strong>
-            </div>
-            <div className="col-3 d-flex justify-content-center align-items-center">
-              <strong>Time of Requested</strong>
-            </div>
-            <div className="col-3 d-flex justify-content-center align-items-center">
-              <strong>Plate Number</strong>
-            </div>
-            <div className="col-2 d-flex justify-content-center align-items-center">
-              <strong>Floor</strong>
-            </div>
-            <div className="col-2 d-flex justify-content-center align-items-center">
-              <strong>Slot Number</strong>
-            </div>
-          </div>
-
-          <div class="row">
-            <div className="col-2 py-3">{request.userEmail}</div>
-            <div className="col-3 py-3">
-              {new Date(request.timestamp.seconds * 1000).toLocaleTimeString(
-                "en-US",
-                {
-                  hour12: true,
-                  hour: "numeric",
-                  minute: "numeric",
-                }
-              )}
-            </div>
-            <div className="col-3 py-3 d-flex justify-content-center align-items-center">
-              {request.carPlateNumber}
-            </div>
-            <div className="col-2 py-3 d-flex justify-content-center align-items-center">
-              {request.floorTitle}
-            </div>
-            <div className="col-2 py-3 d-flex justify-content-center align-items-center">
-              {request.slotNumber}
-            </div>
-          </div>
-
-          <div className="row d-flex justify-content-around">
-            <div className="col-auto">
-            <Button
-    variant="primary"
-    className="me-2"
-    size="sm"
-    onClick={() => {
-        console.log("Request Data:", request);
-        toggleMapModal(request);
-    }}
->
-    View Map
-</Button>
-
-            </div>
-            <div className="col-auto">
-  <Button
-    variant="secondary"
-    onClick={openImageModal}
-    className="me-4 bg-green-600"
-    size="sm"
-    style={{
-      borderColor:
-        request.status === "Approval" || request.status === "Expired"
-          ? "#999999"
-          : "#16A34A",
-      backgroundColor:
-        request.status === "Approval" || request.status === "Expired"
-          ? "#999999"
-          : "#16A34A",
-    }}
-    disabled={request.status === "Approval" || request.status === "Expired"}
-  >
-    {request.status === "Approval"
-      ? "Waiting for Payment"
-      : request.status === "Expired"
-      ? "Expired"
-      : "View Proof of Payment"}
-  </Button>
-</div>
-<div className="col-auto">
-  <Button
-    variant="success"
-    onClick={() =>
-      handleReservation(
-        true,
-        request,
-        index,
-        request.status === "Approval" ? false : true
-      )
-    }
-    className="me-4"
-    size="sm"
-    style={{
-      width: "150px",
-      borderColor:
-        request.status !== "Paid" &&
-        request.status !== "Approval" &&
-        request.status !== "Expired"
-          ? "#999999"
-          : "#16A34A",
-      backgroundColor:
-        request.status !== "Paid" &&
-        request.status !== "Approval" &&
-        request.status !== "Expired"
-          ? "#999999"
-          : "#16A34A",
-    }}
-    disabled={
-      request.status !== "Paid" &&
-      request.status !== "Approval" &&
-      request.status !== "Expired"
-        ? true
-        : false
-    }
-  >
-    {request.status === "Expired"
-      ? "Expired"
-      : reservationIsApprove
-      ? "Paid"
-      : "Approve"}
-  </Button>
-</div>
-            <div className="col-auto">
-              <Button
-                variant="danger"
-                onClick={() => handleReservation(false, request, index)}
-                size="sm"
-                style={{
-                  borderColor:
-                    request.status === "Paid" ? "#ff0000" : "#ff0000",
-                  backgroundColor:
-                    request.status === "Paid" ? "#ff0000" : "#ff0000",
-                }}
-              >
-                Decline Reservation
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Details Row */}
-        {/* <div className="d-flex justify-content-between mb-2">
-          <div className="p-2">{request.userName}</div>
-          <div className="p-2">{request.timeOfRequest}</div>
-          <div className="p-2">{request.carPlateNumber}</div>
-          <div className="p-1">{request.floorTitle}</div>
-          <div className="p-2">{request.slotId + 1}</div>
-        </div> */}
-
-        {/* Slot Number and Action Buttons Row */}
-        {/* <div className="d-flex align-items-center">
-          <div className="ms-auto d-flex">
-            <Button
-              variant="primary"
-              onClick={toggleMapModal}
-              className="me-4"
-              size="sm"
-            >
-              View Map
+           
+        {/* Map Modal */}
+        <Modal show={mapModal.show} onHide={() => toggleMapModal(null)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>Map</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {mapModal.data?.currentLocation && user?.coordinates ? (
+              <MapComponent
+              origin={mapModal.data.currentLocation} // Correct field here
+              destination={user.coordinates}
+              />
+            ) : (
+              <p>No map data available</p>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => toggleMapModal(null)}>
+              Close
             </Button>
-            <Button
-              variant="secondary"
-              onClick={openImageModal}
-              className="me-4 bg-green-600"
-              size="sm"
-              style={{
-                borderColor:
-                  request.status === "Approval" ? "#999999" : "#16A34A",
-                backgroundColor:
-                  request.status === "Approval" ? "#999999" : "#16A34A",
-              }}
-            >
-              {request.status === "Approval"
-                ? "Waiting for Payment "
-                : "View Proof of Payment"}
-            </Button>
-            <Button
-              variant="success"
-              onClick={() => handleReservation(true, request, index)}
-              className="me-4"
-              size="sm"
-              style={{
-                borderColor: request.status === "Paid" ? "#999999" : "#16A34A",
-                backgroundColor:
-                  request.status === "Paid" ? "#999999" : "#16A34A",
-              }}
-            >
-              {request.status === "Paid" ? request.status : "Approved"}
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => handleReservation(false, request, index)}
-              size="sm"
-            >
-              Decline Reservation
-            </Button>
-          </div>
-        </div> */}
-
-       {/* Map Modal */}
-       <Modal show={mapModal.show} onHide={() => toggleMapModal(null)} centered>
-    <Modal.Header closeButton>
-        <Modal.Title>Map</Modal.Title>
-    </Modal.Header>
-    <Modal.Body>
-    {mapModal.data?.currentLocation && user?.coordinates ? (
-        <MapComponent
-            origin={mapModal.data.currentLocation} // Correct field here
-            destination={user.coordinates}
-        />
-    ) : (
-        <p>No map data available</p>
-    )}
-</Modal.Body>
-
-    <Modal.Footer>
-        <Button variant="secondary" onClick={() => toggleMapModal(null)}>
-            Close
-        </Button>
-    </Modal.Footer>
-</Modal>
-
+          </Modal.Footer>
+        </Modal>
+    
         {/* Image Modal */}
         <Modal show={showImageModal} onHide={toggleImageModal} centered>
           <Modal.Header closeButton>
@@ -1175,6 +1144,7 @@ const toggleMapModal = (data) => {
         </Modal>
       </div>
     );
+    
   };
 
   return (
