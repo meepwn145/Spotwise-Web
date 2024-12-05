@@ -29,6 +29,7 @@ function Create() {
 	const [allocatedTimeForArrival, setAllocatedTimeForArrival] = useState("");
 	const [hourType, setHourType] = useState("Fixed");
 	const [continuousParkingFee, setContinuousParkingFee] = useState("");
+	const [gracePeriod, setGracePeriod] = useState("");
 	const navigate = useNavigate();
 
 	const { coords, isGeolocationAvailable, isGeolocationEnabled } = useGeolocated({
@@ -150,6 +151,7 @@ function Create() {
 				allocatedTimeForArrival,
 				hourType, 
 				continuousParkingFee,
+				gracePeriod: hourType === "Continuous" ? gracePeriod : null,
 				fileURLs,
 				coordinates: {
 					lat: coordinates.lat,
@@ -463,6 +465,17 @@ function Create() {
                                         required
                                         style={inputStyle}
                                     />
+									 	<div style={inputGroupStyle}>
+							<input
+								type="number"
+								placeholder="Grace Period (in minute/s)"
+								value={gracePeriod}
+								onChange={(e) => setGracePeriod(e.target.value)}
+								required
+								style={inputStyle}
+								min="0"
+							/>
+						</div>
                                 </div>
                             )}
 				</div>

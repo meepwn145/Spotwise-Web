@@ -305,12 +305,14 @@ useEffect(() => {
       const slotDataQuery = query(collection(db, "slot", user.managementName, "slotData"));
       const slotDataSnapshot = await getDocs(slotDataQuery);
       let fetchedSlotData = new Map(); 
+      console.log("Fetched Slot Data:", fetchedSlotData);
       console.log("Slot Data Snapshot:", slotDataSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))); // Log the entire snapshot for verification
       slotDataSnapshot.forEach((doc) => {
         fetchedSlotData.set(doc.id, {
           ...doc.data(),
           occupied: doc.data().status === "Occupied",
           from: doc.data().from || 'Not Specified',
+          allocatedTimeForArrival: doc.data().allocatedTimeForArrival || "default_value",
         });
       });
     };
@@ -1057,17 +1059,55 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     const slot = slotSets[currentSetIndex].slots[index];
     setSelectedSlot(index);
     setShowModal(true);
-    setUserDetails(slotSets[currentSetIndex].slots[index]?.userDetails || null);
+  
+    if (slot.occupied) {
+      const slotData = slot.userDetails;
+      const currentTime = Date.now();
+  
+      // Extract reservation start time, grace period, and continuous parking fee rate
+      const reservationStartTime = slotData.timestamp.seconds * 1000; // Convert to milliseconds
+      const allocatedTimeInMs =
+        Number(slotData.allocatedTimeForArrival || 0) * 60 * 1000; // Convert minutes to milliseconds
+      const gracePeriodInMs =
+        Number(slotData.gracePeriod || 0) * 60 * 1000; // Grace period in milliseconds
+      const feePerMinute = Number(slotData.continuousParkingFee || 0); // Use the variable continuousParkingFee
+  
+      // Calculate expiration time (end of grace period)
+      const graceExpirationTime =
+        reservationStartTime + allocatedTimeInMs + gracePeriodInMs;
+  
+      // If grace period has ended, calculate the fee
+      if (currentTime > graceExpirationTime) {
+        const elapsedMinutes = Math.ceil(
+          (currentTime - graceExpirationTime) / 60000
+        );
+        const totalFee = elapsedMinutes * feePerMinute;
+        setUserDetails({
+          ...slotData,
+          totalParkingFee: totalFee,
+        });
+      } else {
+        setUserDetails({
+          ...slotData,
+          totalParkingFee: 0,
+        });
+      }
+    } else {
+      setUserDetails(null);
+    }
+  
     setShowAssignButton(!slot.occupied);
-  setShowExitButton(slot.occupied);
-  setEnterPressed(false);
-  setShowExitConfirmation(false);
-  if (slot.occupied && slot.from && slot.from.trim().toLowerCase() === "reservation") {
-    setShowArrivedButton(true);
-  } else {
-    setShowArrivedButton(false);
-  }
+    setShowExitButton(slot.occupied);
+    setEnterPressed(false);
+    setShowExitConfirmation(false);
+  
+    if (slot.occupied && slot.from && slot.from.trim().toLowerCase() === "reservation") {
+      setShowArrivedButton(true);
+    } else {
+      setShowArrivedButton(false);
+    }
   };
+  
 
   const handleArrived = (slotIndex) => {
     // Update the local state to reflect that the slot is now occupied
@@ -1115,8 +1155,92 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     // Close modal after updating
     handleCloseModal();
   };
+  useEffect(() => {
+    const fetchAndUpdateSlotData = async (slot, floorIndex, slotIndex) => {
+      if (slot.from && slot.from.trim().toLowerCase() === "reservation") {
+        const managementDocRef = doc(db, "slot", user.managementName);
+        const slotCollectionRef = collection(managementDocRef, "slotData");
+        const floorTitle = slotSets[floorIndex].title || "General Parking";
+        const uniqueDocName = `slot_${floorTitle}_${slotIndex}`;
+        const slotDocRef = doc(slotCollectionRef, uniqueDocName);
   
-
+        const slotDocSnap = await getDoc(slotDocRef);
+        if (slotDocSnap.exists()) {
+          const slotData = slotDocSnap.data();
+          const allocatedTimeInMinutes = parseInt(slotData.allocatedTimeForArrival, 10); // Allocated time in minutes
+  
+          if (allocatedTimeInMinutes && !isNaN(allocatedTimeInMinutes)) {
+            const createdTime = slotData.timestamp.seconds * 1000; // Reservation creation timestamp in ms
+            const expirationTime = createdTime + allocatedTimeInMinutes * 60 * 1000; // Expiration timestamp in ms
+            const currentTime = Date.now();
+  
+            const remainingTimeInMs = expirationTime - currentTime;
+            const remainingTimeInMin = Math.max(Math.floor(remainingTimeInMs / (60 * 1000)), 0); // Remaining time in minutes
+  
+            console.log(`Slot ${slotIndex} on floor "${floorTitle}" has ${remainingTimeInMin} minutes remaining.`);
+  
+            if (remainingTimeInMin <= 0) {
+              // Timer expired
+              console.log(`Timer expired for slot ${slotIndex} on floor ${floorTitle}`);
+              await deleteDoc(slotDocRef); // Remove expired reservation
+              return { ...slot, occupied: false, from: null, userDetails: null };
+            } else {
+              return { ...slot, remainingTime: remainingTimeInMin };
+            }
+          }
+        }
+      }
+      return slot;
+    };
+  
+    const checkReservationTimers = async () => {
+      const updatedSets = await Promise.all(
+          slotSets.map(async (slotSet, floorIndex) => ({
+              ...slotSet,
+              slots: await Promise.all(
+                  slotSet.slots.map(async (slot, slotIndex) => {
+                      if (slot.from && slot.from.trim().toLowerCase() === "reservation") {
+                          const managementDocRef = doc(db, "slot", user.managementName);
+                          const slotCollectionRef = collection(managementDocRef, "slotData");
+                          const floorTitle = slotSets[floorIndex].title || "General Parking";
+                          const uniqueDocName = `slot_${floorTitle}_${slotIndex}`;
+                          const slotDocRef = doc(slotCollectionRef, uniqueDocName);
+  
+                          const slotDocSnap = await getDoc(slotDocRef);
+                          if (slotDocSnap.exists()) {
+                              const slotData = slotDocSnap.data();
+                              const reservationTimestamp = slotData.timestamp.seconds * 1000; // Firestore timestamp
+                              const allocatedTimeInMs = Number(slotData.allocatedTimeForArrival) * 60 * 1000;
+                              const remainingTimeInMs = reservationTimestamp + allocatedTimeInMs - Date.now();
+  
+                              if (remainingTimeInMs <= 0) {
+                                  console.log(`Timer expired for slot ${slotIndex} on floor ${floorTitle}`);
+                                  await deleteDoc(slotDocRef); // Remove expired reservation
+                                  return { ...slot, occupied: false, from: null, userDetails: null };
+                              } else {
+                                  const remainingTimeInMinutes = Math.ceil(remainingTimeInMs / 60000);
+                                  console.log(`Slot ${slotIndex} on floor "${floorTitle}" has ${remainingTimeInMinutes} minutes remaining.`);
+                                  return { ...slot, remainingTime: remainingTimeInMinutes };
+                              }
+                          }
+                      }
+                      return slot;
+                  })
+              ),
+          }))
+      );
+      setSlotSets(updatedSets);
+  };
+  
+  
+    // Use a properly configured interval to update timers
+    const intervalId = setInterval(() => {
+      checkReservationTimers();
+    }, 60000); // Every minute
+  
+    return () => clearInterval(intervalId); // Cleanup the interval
+  }, [slotSets, user.managementName, db]);
+  
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [tempUserDetails, setTempUserDetails] = useState(null);
 
