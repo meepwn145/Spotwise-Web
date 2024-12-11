@@ -224,7 +224,7 @@ const EstablishmentReserve = () => {
                     to="/Tracks" 
                     className={({ isActive }) => (isActive ? 'actives' : '')}
                 >
-                    <i className="fas fa-user"></i>Account Management
+                    <i className="fas fa-user"></i>Management Details
                 </NavLink>
                 </li>
                 <li>

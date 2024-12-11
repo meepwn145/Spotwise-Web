@@ -327,7 +327,7 @@ function AdminPage() {
 								<tr key={account.id}>
 									<td>{account.email}</td>
 									<td>{account.managementName}</td>
-									<td>{account.contactNumber}</td>
+									<td>{account.contact}</td>
 									<td>{account.companyAddress}</td>
 									<td>{account.numberOfFloors}</td>
 									<td>{account.totalSlots}</td>
