@@ -56,7 +56,7 @@ function Login() {
 	
 		try {
 			// Check if email is in pending
-			const inPending = pendingAccounts.some((user) => user.email === email);
+			const inPending = pendingAccounts.some((account) => account.email === email);
 			if (inPending) {
 				alert("Account still awaiting admin approval!");
 				return;
@@ -68,14 +68,13 @@ function Login() {
 	
 			if (user) {
 				const agentsRef = query(collection(db, "agents"), where("email", "==", user.email));
-				const establishmentsRef = query(
-					collection(db, "establishments"),
-					where("email", "==", user.email)
-				);
+				const adminsRef = query(collection(db, "admin"), where("email", "==", user.email));
+				const establishmentsRef = query(collection(db, "establishments"), where("email", "==", user.email));
 	
-				const [agentsSnapshot, establishmentsSnapshot] = await Promise.all([
+				const [agentsSnapshot, adminsSnapshot, establishmentsSnapshot] = await Promise.all([
 					getDocs(agentsRef),
-					getDocs(establishmentsRef),
+					getDocs(adminsRef),
+					getDocs(establishmentsRef)
 				]);
 	
 				let userData = null;
@@ -83,10 +82,13 @@ function Login() {
 	
 				if (!agentsSnapshot.empty) {
 					userData = agentsSnapshot.docs[0].data();
-					path = "/Home";
+					path = "/Home";  // Navigate to agent's dashboard
 				} else if (!establishmentsSnapshot.empty) {
 					userData = establishmentsSnapshot.docs[0].data();
-					path = "/Dashboard";
+					path = "/Dashboard";  // Navigate to establishment's dashboard
+				} else if (!adminsSnapshot.empty) {
+					userData = adminsSnapshot.docs[0].data();
+					path = "/adminPage";  // Navigate to admin's dashboard
 				}
 	
 				if (userData) {
@@ -104,6 +106,7 @@ function Login() {
 			alert("Error logging in: " + error.message);
 		}
 	};
+	
 	const containerStyle = {
 		display: "flex",
 		flexDirection: "column",

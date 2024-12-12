@@ -176,7 +176,9 @@ useEffect(() => {
 
 const [showNewReservationModal, setShowNewReservationModal] = useState(false);
 const [newReservationDetails, setNewReservationDetails] = useState({});
-
+const [gracePeriod, setGracePeriod] = useState("");
+const [continuousParkingFee, setContinuousParkingFee] = useState("");
+const [hourType, setHourType] = useState("");
 useEffect(() => {
   const unsubscribe = onSnapshot(
     query(
@@ -234,11 +236,18 @@ useEffect(() => {
         const querySnapshot = await getDocs(q);
 
         console.log(`Found ${querySnapshot.docs.length} documents`);
-
         if (!querySnapshot.empty) {
           const establishmentData = querySnapshot.docs[0].data();
           console.log("Establishment Data:", establishmentData);
+  
           setParkingPay(establishmentData.parkingPay);
+          if (establishmentData.hourType === "Continuous") {
+            setGracePeriod(establishmentData.gracePeriod);
+            setContinuousParkingFee(establishmentData.continuousParkingFee);
+          } else {
+            setGracePeriod(null);
+            setContinuousParkingFee(null);
+          }
         } else {
           console.log("No matching establishment found!");
         }
@@ -748,6 +757,11 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     const updatedSets = [...slotSets];
     const timestamp = new Date();
 
+    if (user.hourType === "Continuous") {
+      updatedUserDetails.gracePeriod = gracePeriod;  // Assumes gracePeriod is defined in your state
+      updatedUserDetails.continuousParkingFee = continuousParkingFee;  // Assumes continuousParkingFee is defined in your state
+  }
+
     const updatedUserDetails = {
       carPlateNumber,
       slotId: slotIndex,
@@ -764,6 +778,8 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       timestamp,
       slotNumber: continuousSlotNumber,
       from: walkIn,
+      gracePeriod: gracePeriod,
+      continuousParkingFee: continuousParkingFee,
     };
 
     updatedSets[currentSetIndex].slots[slotIndex] = {
@@ -1059,54 +1075,20 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     const slot = slotSets[currentSetIndex].slots[index];
     setSelectedSlot(index);
     setShowModal(true);
-  
-    if (slot.occupied) {
-      const slotData = slot.userDetails;
-      const currentTime = Date.now();
-  
-      // Extract reservation start time, grace period, and continuous parking fee rate
-      const reservationStartTime = slotData.timestamp.seconds * 1000; // Convert to milliseconds
-      const allocatedTimeInMs =
-        Number(slotData.allocatedTimeForArrival || 0) * 60 * 1000; // Convert minutes to milliseconds
-      const gracePeriodInMs =
-        Number(slotData.gracePeriod || 0) * 60 * 1000; // Grace period in milliseconds
-      const feePerMinute = Number(slotData.continuousParkingFee || 0); // Use the variable continuousParkingFee
-  
-      // Calculate expiration time (end of grace period)
-      const graceExpirationTime =
-        reservationStartTime + allocatedTimeInMs + gracePeriodInMs;
-  
-      // If grace period has ended, calculate the fee
-      if (currentTime > graceExpirationTime) {
-        const elapsedMinutes = Math.ceil(
-          (currentTime - graceExpirationTime) / 60000
-        );
-        const totalFee = elapsedMinutes * feePerMinute;
-        setUserDetails({
-          ...slotData,
-          totalParkingFee: totalFee,
-        });
-      } else {
-        setUserDetails({
-          ...slotData,
-          totalParkingFee: 0,
-        });
-      }
-    } else {
-      setUserDetails(null);
-    }
-  
+    setUserDetails(slotSets[currentSetIndex].slots[index]?.userDetails || null);
     setShowAssignButton(!slot.occupied);
-    setShowExitButton(slot.occupied);
-    setEnterPressed(false);
-    setShowExitConfirmation(false);
-  
-    if (slot.occupied && slot.from && slot.from.trim().toLowerCase() === "reservation") {
-      setShowArrivedButton(true);
-    } else {
-      setShowArrivedButton(false);
-    }
+  setShowExitButton(slot.occupied);
+  setEnterPressed(false);
+  setShowExitConfirmation(false);
+  if (slot.occupied && slot.from && slot.from.trim().toLowerCase() === "reservation") {
+    setShowArrivedButton(true);
+  } else {
+    setShowArrivedButton(false);
+  }
   };
+  
+
+  
   
 
   const handleArrived = (slotIndex) => {
@@ -1224,6 +1206,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
                               }
                           }
                       }
+                      
                       return slot;
                   })
               ),
@@ -1241,6 +1224,73 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     return () => clearInterval(intervalId); // Cleanup the interval
   }, [slotSets, user.managementName, db]);
   
+  useEffect(() => {
+    const updateSlotsDurations = () => {
+      const updatedSets = [...slotSets];
+      const currentTime = Date.now(); // Get current timestamp in milliseconds
+  
+      updatedSets.forEach((slotSet, floorIndex) => {
+        slotSet.slots.forEach((slot, slotIndex) => {
+          // Check if the slot is occupied
+          if (slot.occupied) {
+            // Prioritize timestamp in userDetails, fallback to slot.timestamp if not found
+            const timestamp = slot.userDetails?.timestamp || slot.timestamp;
+  
+            if (timestamp) {
+              // Ensure timestamp is correctly formatted (Firestore timestamp is in seconds)
+              const slotTimestamp = timestamp.seconds ? timestamp.seconds * 1000 : timestamp * 1000; // Convert Firestore timestamp to milliseconds
+              const durationInMillis = currentTime - slotTimestamp; // Duration in milliseconds
+              const durationInMinutes = Math.floor(durationInMillis / (1000 * 60)); // Convert to minutes
+  
+              console.log(`Slot ${slotIndex + 1} on floor "${slotSet.title}" has been occupied for ${durationInMinutes} minutes.`);
+  
+              // Check if the duration exceeds the grace period and calculate additional fee
+              if (slot.userDetails?.gracePeriod && durationInMinutes > slot.userDetails.gracePeriod) {
+                const additionalFee = (durationInMinutes - slot.userDetails.gracePeriod) * slot.userDetails.continuousParkingFee;
+                const exceedingLimit = durationInMinutes - slot.userDetails.gracePeriod;
+                console.log(`Additional fee for slot ${slotIndex + 1}: ${additionalFee} (calculated from ${durationInMinutes - slot.userDetails.gracePeriod} minutes).`);
+                
+                // Update the user details with the additional fee
+                updatedSets[floorIndex].slots[slotIndex] = {
+                  ...slot,
+                  userDetails: {
+                    ...slot.userDetails,
+                    additionalFee,
+                    exceedingLimit, // Add the calculated additional fee to the user details
+                  },
+                };
+              } else {
+                // If within the grace period, don't add any additional fee
+                updatedSets[floorIndex].slots[slotIndex] = {
+                  ...slot,
+                  userDetails: {
+                    ...slot.userDetails,
+                    additionalFee: 0,
+                    exceedingLimit: 0, // Ensure additional fee is set to 0
+                  },
+                };
+              }
+            } else {
+              // If the timestamp is not found either in userDetails or in the slot, handle accordingly
+              console.log(`Slot ${slotIndex + 1} on floor "${slotSet.title}" is missing a timestamp. Skipping duration calculation.`);
+            }
+          }
+        });
+      });
+  
+      setSlotSets(updatedSets);
+    };
+  
+    const intervalId = setInterval(() => {
+      console.log("Updating slot durations...");
+      updateSlotsDurations();
+    }, 1000); // Update every second
+  
+    return () => clearInterval(intervalId); // Cleanup interval on component unmount
+  }, [slotSets]);
+  
+
+
   const [showExitConfirmation, setShowExitConfirmation] = useState(false);
   const [tempUserDetails, setTempUserDetails] = useState(null);
 
@@ -1498,6 +1548,23 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
                   userDetails={userDetails}
                 />
               )}
+                {selectedSlot !== null && slotSets[currentSetIndex].slots[selectedSlot].occupied && (
+      <div>
+        {/* Display additional fee and exceeding limit */}
+        <div style={{ marginBottom: "10px" }}>
+          <strong>Additional Fee: </strong>
+          {slotSets[currentSetIndex].slots[selectedSlot].userDetails.additionalFee > 0
+            ? `PHP: ${slotSets[currentSetIndex].slots[selectedSlot].userDetails.additionalFee}`
+            : "No additional fee"}
+        </div>
+        <div style={{ marginBottom: "10px" }}>
+          <strong>Exceeding Limit: </strong>
+          {slotSets[currentSetIndex].slots[selectedSlot].userDetails.exceedingLimit > 0
+            ? `${slotSets[currentSetIndex].slots[selectedSlot].userDetails.exceedingLimit} minutes`
+            : "No exceeding limit"}
+        </div>
+      </div>
+    )}
               {selectedSlot !== null && userDetails && (
                 <div className="user-details">
                   <h4 style={{ fontFamily: "Copperplate", fontWeight: "bold" }}>

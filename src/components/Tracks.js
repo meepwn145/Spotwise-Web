@@ -41,9 +41,20 @@ const App = () => {
     const [slotData, setSlotData] = useState([]);
     const [showOperatorManagement, setShowOperatorManagement] = useState(true);
     const [operators, setOperators] = useState([]);
+    const [showDayToDayReports, setShowDayToDayReports] = useState(false);
+    const [reports, setReports] = useState([]);
+
+
     const handleShowOperatorManagement = () => {
         setShowOperatorManagement(true);
+        setShowDayToDayReports(false);
     };
+
+    const handleShowDayToDayReports = () => {
+        setShowOperatorManagement(false);
+        setShowDayToDayReports(true);
+    };
+
     const userDocRef = auth.currentUser ? doc(db, "establishments", auth.currentUser.uid) : null;
     useEffect(() => {
       if (userDocRef) {
@@ -291,63 +302,85 @@ const App = () => {
                     <EstablishmentReserve onOperatorManagementClick={handleShowOperatorManagement} />
                 </div>
 
-                <Container style={{ marginTop: '15vh' }}>
-                    <h2 style={{ fontSize: 50, marginTop: '10px' }}>Management Details Page</h2>
-                    <hr className="divider" style={{ color: '#132B4B', marginBottom: '40px' }} />
-                    <Button
-                    onClick={handleShowOperatorManagement}
-                    style={{
-                        backgroundColor: '#003851',
-                        color: 'white',
-                        border: 'none',
-                        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
-                        borderRadius: '50px',
-                        display: 'block', // Ensures it takes full width in its container
-                        margin: '0 auto', // Centers the button horizontally
-                    }}
-                    className="btn-lg"
-                >
-                    Operator Management
-                </Button>
+                <Container style={{ marginTop: "15vh" }}>
+                    <h2 style={{ fontSize: 50, marginTop: "10px" }}>Management Details Page</h2>
+                    <hr style={{ color: "#132B4B", marginBottom: "40px" }} />
+                    <div className="text-center mb-4">
+                        <Button
+                            onClick={handleShowOperatorManagement}
+                            style={{ backgroundColor: "#003851", color: "white", marginRight: "10px" }}
+                        >
+                            Operator Management
+                        </Button>
+                        <Button
+                            onClick={handleShowDayToDayReports}
+                            style={{ backgroundColor: "#003851", color: "white" }}
+                        >
+                            Day-to-day Reports
+                        </Button>
+                    </div>
 
                     {showOperatorManagement && (
                         <div>
-                            <h3 className="text-center mb-4"><i className="fas fa-users"></i></h3>
+                            <h3 className="text-center mb-4">Operators</h3>
                             {operators.length === 0 ? (
-                                <p className="text-center">No operator registered</p> // Display message if no operators
+                                <p className="text-center">No operators registered</p>
                             ) : (
-                            <Table striped bordered hover responsive className="text-center">
-                                <thead className="bg-primary text-white">
-                                    <tr>
-                                        <th>Operator Name</th>
-                                        <th>Management Name</th>
-                                        <th>Contact Number</th>
-                                        <th>Role</th>
-                                        <th>Actions</th>
-
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {operators.map((operator) => (
-                                        <tr key={operator.id}>
-                                            <td>{operator.firstName} {operator.lastName}</td>
-                                            <td>{operator.managementName}</td> 
-                                            <td>{operator.phoneNumber}</td>
-                                            <td>Parking Operator</td>
-                                            <td>
+                                <Table striped bordered hover responsive>
+                                    <thead className="bg-primary text-white">
+                                        <tr>
+                                            <th>Operator Name</th>
+                                            <th>Management Name</th>
+                                            <th>Contact Number</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {operators.map((operator) => (
+                                            <tr key={operator.id}>
+                                                <td>{operator.firstName} {operator.lastName}</td>
+                                                <td>{operator.managementName}</td>
+                                                <td>{operator.phoneNumber}</td>
+                                                <td>
                                                 <Button
                                                     variant="danger"
                                                     onClick={() => handleRemoveOperator(operator.id)}
                                                 >
                                                     Remove
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                                                        )}
+                                                </Button>                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            )}
+                        </div>
+                    )}
 
+                    {showDayToDayReports && (
+                        <div>
+                            <h3 className="text-center mb-4">Day-to-day Reports</h3>
+                            {reports.length === 0 ? (
+                                <p className="text-center">No reports available</p>
+                            ) : (
+                                <Table striped bordered hover responsive>
+                                    <thead className="bg-primary text-white">
+                                        <tr>
+                                            <th>Driver</th>
+                                            <th>Date & Time</th>
+                                            <th>Parking Payment</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {reports.map((report) => (
+                                            <tr key={report.id}>
+                                                <td>{report.driverName || "Unknown"}</td>
+                                                <td>{formatDateAndTime(report.timestamp)}</td>
+                                                <td>{report.payment || "N/A"}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </Table>
+                            )}
                         </div>
                     )}
                 </Container>

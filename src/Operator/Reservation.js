@@ -599,6 +599,8 @@ const toggleMapModal = (data) => {
       userEmail,
       reservationId,
       slotNumber,
+      continuousParkingFee, // Assuming these are part of reservationRequest
+      gracePeriod,
     } = reservationRequest;
     if (accepted && !isPaid) {
       // Check if the slot is occupied
@@ -827,34 +829,48 @@ const toggleMapModal = (data) => {
         clearInterval(timerId);
         setTimerId(null);
       }
-      const slotDocRef = doc(
-        db,
-        "slot",
-        user.managementName,
-        "slotData",
-        `slot_${floorTitle}_${slotId}`
-      );
 
-      await setDoc(
-        slotDocRef,
-        {
-          userDetails: {
-            name: userName,
-            carPlateNumber,
-            slotId,
-            floorTitle,
-            userEmail,
-            slotNumber,
-          },
-          from: "Reservation",
-          reservationId: reservationId,
-          status: "Occupied",
-          timestamp: new Date(),
-          reserveStatus: "Accepted",
-          allocatedTimeForArrival:reservationRequest.allocatedTimeForArrival,
-        },
-        { merge: true }
-      );
+        const slotData = {
+      userDetails: {
+        name: userName,
+        carPlateNumber,
+        slotId,
+        floorTitle,
+        userEmail,
+        slotNumber,
+        timestamp: new Date(),
+        continuousParkingFee: continuousParkingFee || 0,  // Adding the continuousParkingFee
+        gracePeriod: gracePeriod || 0,  
+      },
+      from: "Reservation",
+      reservationId: reservationId,
+      status: "Occupied",
+      reserveStatus: "Accepted",
+      allocatedTimeForArrival: reservationRequest.allocatedTimeForArrival,
+    };
+
+    // Conditionally add continuousParkingFee and gracePeriod if they exist and are not null
+    if (continuousParkingFee !== undefined && continuousParkingFee !== null) {
+      slotData.continuousParkingFee = continuousParkingFee;
+    }
+    if (gracePeriod !== undefined && gracePeriod !== null) {
+      slotData.gracePeriod = gracePeriod;
+    }
+
+    // Update the slot document in Firestore
+    const slotDocRef = doc(
+      db,
+      "slot",
+      user.managementName,
+      "slotData",
+      `slot_${floorTitle}_${slotId}`
+    );
+
+    await setDoc(
+      slotDocRef,
+      slotData,
+      { merge: true }
+    );
 
       const reservationDocRef = doc(db, "reservations", id);
       await deleteDoc(reservationDocRef);
