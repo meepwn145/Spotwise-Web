@@ -599,7 +599,7 @@ const toggleMapModal = (data) => {
       userEmail,
       reservationId,
       slotNumber,
-      continuousParkingFee, // Assuming these are part of reservationRequest
+      continuousParkingFee,// Assuming these are part of reservationRequest
       gracePeriod,
     } = reservationRequest;
     if (accepted && !isPaid) {
@@ -841,12 +841,14 @@ const toggleMapModal = (data) => {
         timestamp: new Date(),
         continuousParkingFee: continuousParkingFee || 0,  // Adding the continuousParkingFee
         gracePeriod: gracePeriod || 0,  
+        parkingPay: reservationRequest.parkingPay,
       },
       from: "Reservation",
       reservationId: reservationId,
       status: "Occupied",
       reserveStatus: "Accepted",
       allocatedTimeForArrival: reservationRequest.allocatedTimeForArrival,
+      timestamp: new Date(),
     };
 
     // Conditionally add continuousParkingFee and gracePeriod if they exist and are not null
@@ -870,6 +872,14 @@ const toggleMapModal = (data) => {
       slotDocRef,
       slotData,
       { merge: true }
+    );
+    
+
+    const paymentRecordRef = doc(db, "reports", user.managementName, "daily", `slot_${floorTitle}_${slotId}`);
+    await setDoc (
+      paymentRecordRef,
+      slotData,
+      {merge: true}
     );
 
       const reservationDocRef = doc(db, "reservations", id);

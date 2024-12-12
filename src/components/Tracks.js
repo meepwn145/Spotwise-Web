@@ -43,7 +43,7 @@ const App = () => {
     const [operators, setOperators] = useState([]);
     const [showDayToDayReports, setShowDayToDayReports] = useState(false);
     const [reports, setReports] = useState([]);
-
+    const [totalFees, setTotalFees] = useState(0);
 
     const handleShowOperatorManagement = () => {
         setShowOperatorManagement(true);
@@ -71,7 +71,42 @@ const App = () => {
           fetchImageUrl().catch(console.error);
       }
   }, [userDocRef]);
-  
+  useEffect(() => {
+    const fetchTodayReports = async () => {
+        if (!user || !user.managementName) {
+            console.log("User or management name not set");
+            return;
+        }
+    
+        setLoading(true);
+        try {
+            const reportsRef = collection(db, "reports", user.managementName, "daily");
+            const q = query(reportsRef);
+            const snapshot = await getDocs(q);
+            const fetchedReports = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+    
+            setReports(fetchedReports);
+            const total = fetchedReports.reduce((acc, report) => {
+                const parkingPay = parseFloat(report.userDetails.parkingPay) || 0;
+                const additionalFee = parseFloat(report.userDetails.additionalFee) || 0;
+                return acc + parkingPay + additionalFee;
+            }, 0);
+            setTotalFees(total);
+            console.log("Today's reports fetched successfully:", fetchedReports);
+        } catch (error) {
+            console.error("Error fetching today's reports:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+
+    fetchTodayReports();
+}, [user]); // Dependency array includes 'user' to refetch when user data changes
+
   useEffect(() => {
     // Fetch only operators associated with the logged-in establishment
     const fetchOperators = async () => {
@@ -316,7 +351,7 @@ const App = () => {
                             onClick={handleShowDayToDayReports}
                             style={{ backgroundColor: "#003851", color: "white" }}
                         >
-                            Day-to-day Reports
+                           Parking Management Reports
                         </Button>
                     </div>
 
@@ -356,33 +391,41 @@ const App = () => {
                         </div>
                     )}
 
-                    {showDayToDayReports && (
-                        <div>
-                            <h3 className="text-center mb-4">Day-to-day Reports</h3>
-                            {reports.length === 0 ? (
-                                <p className="text-center">No reports available</p>
-                            ) : (
-                                <Table striped bordered hover responsive>
-                                    <thead className="bg-primary text-white">
-                                        <tr>
-                                            <th>Driver</th>
-                                            <th>Date & Time</th>
-                                            <th>Parking Payment</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {reports.map((report) => (
-                                            <tr key={report.id}>
-                                                <td>{report.driverName || "Unknown"}</td>
-                                                <td>{formatDateAndTime(report.timestamp)}</td>
-                                                <td>{report.payment || "N/A"}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </Table>
-                            )}
-                        </div>
-                    )}
+{showDayToDayReports && (
+    <div>
+        <h3 className="text-center mb-4">Parking Management Reports</h3>
+        <div style={{fontWeight: "bold"}}>
+        Total Fees to Received: PHP {typeof totalFees === 'number' ? totalFees.toFixed(2) : '0.00'}
+        </div>
+        {reports.length === 0 ? (
+            <p className="text-center">No reports available</p>
+        ) : (
+            <Table striped bordered hover responsive>
+                <thead className="bg-primary text-white">
+                    <tr>
+                        <th>Plate Number</th>
+                        <th>Date & Time</th>
+                        <th>Parking Payment</th>
+                        <th>Additional Fee</th>
+                        <th>Slot Usage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {reports.map((report) => (
+                        <tr key={report.id}>
+                            <td>{report.userDetails.carPlateNumber || "Unknown"}</td>
+                            <td>{formatDateAndTime(report.timestamp)}</td>
+                            <td>{report.userDetails.parkingPay || "N/A"}</td>
+                            <td>{report.userDetails.additionalFee || 0}</td>
+                            <td>{report.userDetails.exceedingLimit || 0} minute(s)</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </Table>
+        )}
+    </div>
+)}
+
                 </Container>
             </div>
         </section>
