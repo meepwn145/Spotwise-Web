@@ -10,6 +10,8 @@ import UserContext from "../UserContext";
 import { MDBCol, MDBContainer, MDBRow, MDBCard, MDBCardText, MDBCardBody, MDBCardImage, MDBListGroup, MDBListGroupItem, MDBBtn, MDBTypography } from "mdb-react-ui-kit";
 import './dashboardCard.css'
 import './AgentRegistration.css'
+import { query, where, getDocs } from "firebase/firestore"; // Import Firestore functions
+
 import EstablishmentReserve from "./establishmentReserve";
 
 function CreateAccount() {
@@ -102,42 +104,67 @@ function CreateAccount() {
         navigate("/Dashboard");
     };
     const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-
-            await setDoc(doc(db, "agents", user.uid), {
-                uid: user.uid,
-                firstName,
-                lastName,
-                email,
-                phoneNumber,
-                address,
-                password,
-                managementName,
-                companyAddress,
-                companyContact,
-                selectedRadioOption,
-            });
-
-            console.log("Document successfully written and user registered!");
-            setFirstName("");
-            setLastName("");
-            setEmail("");
-            setPassword("");
-            setPhoneNumber("");
-            setAddress("");
-            setSelectedRadioOption("");
-
-            alert("Successfully registered!");
-            navigate("/Dashboard");
-        } catch (error) {
-            console.error("Error creating account:", error);
-            alert(error.message);
-        }
-    };
+      e.preventDefault();
+  
+      // Email validation: must include '@gmail.com' or '@yahoo.com'
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com)$/;
+      if (!emailRegex.test(email)) {
+          alert("Please enter a valid email address with '@gmail.com' or '@yahoo.com'.");
+          return;
+      }
+  
+      // Phone number validation: must be exactly 11 digits
+      const phoneRegex = /^\d{11}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+          alert("Phone number must consist of exactly 11 digits.");
+          return;
+      }
+  
+      try {
+          // Check if email already exists in the agents collection
+          const emailQuery = query(collection(db, "agents"), where("email", "==", email));
+          const querySnapshot = await getDocs(emailQuery);
+  
+          if (!querySnapshot.empty) {
+              alert("An account with this email already exists. Please use a different email.");
+              return;
+          }
+  
+          // Create user in Firebase Authentication
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+  
+          // Save user data to Firestore
+          await setDoc(doc(db, "agents", user.uid), {
+              uid: user.uid,
+              firstName,
+              lastName,
+              email,
+              phoneNumber,
+              address,
+              password,
+              managementName,
+              companyAddress,
+              companyContact,
+              selectedRadioOption,
+          });
+  
+          console.log("Document successfully written and user registered!");
+          setFirstName("");
+          setLastName("");
+          setEmail("");
+          setPassword("");
+          setPhoneNumber("");
+          setAddress("");
+          setSelectedRadioOption("");
+  
+          alert("Successfully registered!");
+          navigate("/Dashboard");
+      } catch (error) {
+          console.error("Error creating account:", error);
+          alert(error.message);
+      }
+  };
 
     const handleRadioChange = (e) => {
         setSelectedRadioOption(e.target.value);

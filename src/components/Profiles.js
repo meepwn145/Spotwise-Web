@@ -266,12 +266,12 @@ export default function EditButton() {
     )}
     {hourType === "Continuous" && (
     <div className="mb-3">
-        <label htmlFor="continuousHourFee" className="form-label">Continuous Hours Fee</label>
+        <label htmlFor="continuousHourFee" className="form-label">Hourly Rate Fee</label>
         <input
             id="continuousHourFee"
             type="text"
             className="form-control"
-            placeholder="Enter Continuous Hours Fee"
+            placeholder="Enter Hourly Parking Fee"
             value={continuousHourFee}
             onChange={(e) => setContinuousHourFee(e.target.value)}
         />
@@ -304,12 +304,12 @@ export default function EditButton() {
 
 {hourType === "Fixed" && (
     <div className="mb-3">
-        <label htmlFor="fixedHourFee" className="form-label">Fixed Hours Fee</label>
+        <label htmlFor="fixedHourFee" className="form-label">Fixed Rate Fee</label>
         <input
             id="fixedHourFee"
             type="text"
             className="form-control"
-            placeholder="Enter Fixed Hours Fee"
+            placeholder="Enter Fixed Rate Fee"
             value={parkingPay} // Assuming you have this state
             onChange={(e) => setFixedHourFee(e.target.value)}
         />

@@ -9,6 +9,7 @@ import { storage } from "../config/firebase";
 import PlacesAutocomplete, { geocodeByAddress, getLatLng } from "react-places-autocomplete";
 import { useGeolocated } from "react-geolocated";
 import * as geofire from "geofire-common";
+import { query, where, getDocs } from "firebase/firestore"; // Import required Firestore functions
 
 function Create() {
 	const [managementName, setManagementName] = useState("");
@@ -94,81 +95,110 @@ function Create() {
 		}
 	};
 
-	const handleSubmit = async (e) => {
-		e.preventDefault();
 
-		if (!managementName || !companyAddress || !email || !password || !contact || !parkingPay || !reservationDuration) {
-			alert("Please fill out all fields.");
-			return;
-		}
+const handleSubmit = async (e) => {
+    e.preventDefault();
 
-		if (!selectedFiles) {
-			alert("Please upload a document.");
-			return;
-		}
+    // Check if all fields are filled
+    if (!managementName || !companyAddress || !email || !password || !contact || !parkingPay || !reservationDuration) {
+        alert("Please fill out all fields.");
+        return;
+    }
 
-		let totalSlots = 0;
+    // Email validation: must include '@gmail.com' or '@yahoo.com'
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com)$/;
+    if (!emailRegex.test(email)) {
+        alert("Please enter a valid email address with '@gmail.com' or '@yahoo.com'.");
+        return;
+    }
 
-		if (numberOfFloors == "1") {
-			if (!numberOfParkingLots) {
-				alert("Please enter the number of parking slots.");
-				return;
-			}
-			totalSlots = parseInt(numberOfParkingLots, 10) || 0;
-		} else {
-			if (floorDetails.some((floor) => !floor.floorName || !floor.parkingLots)) {
-				alert("Please fill out all floor details.");
-				return;
-			}
+    // Contact number validation: must be exactly 11 digits
+    const contactRegex = /^\d{11}$/;
+    if (!contactRegex.test(contact)) {
+        alert("Contact number must consist of exactly 11 digits.");
+        return;
+    }
 
-			totalSlots = floorDetails.reduce((acc, curr) => {
-				return acc + (parseInt(curr.parkingLots, 10) || 0);
-			}, 0);
-		}
+    // Check if a BIR document is uploaded
+    if (selectedFiles.length === 0) {
+        alert("Please upload a BIR document.");
+        return;
+    }
 
-		try {
-			const uploadPromises = selectedFiles.map((file) => {
-				const fileRef = ref(storage, `documents/${email}/${file.name}`);
-				return uploadBytes(fileRef, file).then(() => getDownloadURL(fileRef));
-			});
+    try {
+        // Check if email already exists in the database
+        const q = query(collection(db, "establishments"), where("email", "==", email));
+        const querySnapshot = await getDocs(q);
 
-			const fileURLs = await Promise.all(uploadPromises);
+        if (!querySnapshot.empty) {
+            alert("An account with this email already exists. Please use a different email.");
+            return;
+        }
 
-			const hash = geofire.geohashForLocation([coordinates.lat, coordinates.lng]);
+        let totalSlots = 0;
 
-			const establishmentData = {
-				email,
-				companyAddress,
-				contact,
-				managementName,
-				parkingPay,
-				password,
-				numberOfFloors: parseInt(numberOfFloors, 10),
-				floorDetails,
-				totalSlots,
-				isApproved: false,
-				reservationDuration,
-				allocatedTimeForArrival,
-				hourType, 
-				continuousParkingFee,
-				gracePeriod: hourType === "Continuous" ? gracePeriod : null,
-				fileURLs,
-				coordinates: {
-					lat: coordinates.lat,
-					lng: coordinates.lng,
-				},
-				geohash: hash,
-			};
+        // Parking slot validation
+        if (numberOfFloors == "1") {
+            if (!numberOfParkingLots) {
+                alert("Please enter the number of parking slots.");
+                return;
+            }
+            totalSlots = parseInt(numberOfParkingLots, 10) || 0;
+        } else {
+            if (floorDetails.some((floor) => !floor.floorName || !floor.parkingLots)) {
+                alert("Please fill out all floor details.");
+                return;
+            }
 
-			await addDoc(collection(db, "pendingEstablishments"), establishmentData);
+            totalSlots = floorDetails.reduce((acc, curr) => {
+                return acc + (parseInt(curr.parkingLots, 10) || 0);
+            }, 0);
+        }
 
-			alert("We are currently processing your account. Please wait for admin approval. Thank you!");
-			navigate("/");
-		} catch (error) {
-			console.error("Error creating account:", error);
-			alert(error.message);
-		}
-	};
+        const uploadPromises = selectedFiles.map((file) => {
+            const fileRef = ref(storage, `documents/${email}/${file.name}`);
+            return uploadBytes(fileRef, file).then(() => getDownloadURL(fileRef));
+        });
+
+        const fileURLs = await Promise.all(uploadPromises);
+
+        const hash = geofire.geohashForLocation([coordinates.lat, coordinates.lng]);
+
+        const establishmentData = {
+            email,
+            companyAddress,
+            contact,
+            managementName,
+            parkingPay,
+            password,
+            numberOfFloors: parseInt(numberOfFloors, 10),
+            floorDetails,
+            totalSlots,
+            isApproved: false,
+            reservationDuration,
+            allocatedTimeForArrival,
+            hourType,
+            continuousParkingFee,
+            gracePeriod: hourType === "Continuous" ? gracePeriod : null,
+            fileURLs,
+            coordinates: {
+                lat: coordinates.lat,
+                lng: coordinates.lng,
+            },
+            geohash: hash,
+        };
+
+        await addDoc(collection(db, "pendingEstablishments"), establishmentData);
+
+        alert("We are currently processing your account. Please wait for admin approval. Thank you!");
+        navigate("/");
+    } catch (error) {
+        console.error("Error creating account:", error);
+        alert(error.message);
+    }
+};
+
+	
 
 	const handleParkingTypeChange = (e) => {
 		setNumberOfParkingLots(e.target.value);
@@ -443,7 +473,7 @@ function Create() {
                                     checked={hourType === "Fixed"}
                                     onChange={() => setHourType("Fixed")}
                                 />
-                                <label htmlFor="fixedHours">Fixed Hours</label>
+                                <label htmlFor="fixedHours">Fixed Rate</label>
 
                                 <input
                                     type="radio"
@@ -453,13 +483,13 @@ function Create() {
                                     checked={hourType === "Continuous"}
                                     onChange={() => setHourType("Continuous")}
                                 />
-                                <label htmlFor="continuousHours">Continuous Hours</label>
+                                <label htmlFor="continuousHours">Hourly Rate</label>
                             </div>
                             {hourType === "Continuous" && (
                                 <div style={inputGroupStyle}>
                                     <input
                                         type="text"
-                                        placeholder="Continuous Hours Parking Fee"
+                                        placeholder="Hourly Parking Fee"
                                         value={continuousParkingFee}
                                         onChange={(e) => setContinuousParkingFee(e.target.value)}
                                         required

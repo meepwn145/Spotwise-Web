@@ -12,7 +12,7 @@ import {
 	deleteDoc,
 	Timestamp,
 } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import "./AdminPage.css";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
@@ -255,6 +255,10 @@ function AdminPage() {
 			);
 	
 			const user = userCredential.user;
+			await sendEmailVerification(user, {
+				url: `http://localhost:3000/?`  // Adjust this URL to your login route at the root
+			});
+			console.log("Email sent to", user.email);
 	
 			// Add to 'establishments' collection
 			await setDoc(doc(db, "establishments", user.email), {
