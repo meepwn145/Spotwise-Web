@@ -16,6 +16,7 @@ import {
   getDoc,
   onSnapshot,
   deleteDoc,
+  updateDoc,
 } from "firebase/firestore";
 import SearchForm from "./SearchForm";
 import UserContext from "../UserContext";
@@ -752,7 +753,6 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     const uniqueElement = new Date().getTime(); // Using timestamp for uniqueness
     const uniqueSlotId = `${floorTitle}-${slotIndex}-${uniqueElement}`;
     const uniqueDocName = `slot_${floorTitle}_${slotIndex}`; // Unique document name
-
     // Update the local state with new slot status
     const updatedSets = [...slotSets];
     const timestamp = new Date();
@@ -780,6 +780,7 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       from: walkIn,
       gracePeriod: gracePeriod,
       continuousParkingFee: continuousParkingFee,
+      parkingPay: parkingPay,
     };
 
     updatedSets[currentSetIndex].slots[slotIndex] = {
@@ -821,6 +822,24 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
       .catch((error) =>
         console.error("Error updating slot status in Firebase:", error)
       );
+
+      const checkInDocRef = doc(db, "reports", managementName, "daily", uniqueDocName); // Path to the new document
+      const checkInData = {
+          timestamp: timestamp, // Use Firebase server timestamp for consistency
+          userDetails: updatedUserDetails,
+          managementName: managementName,
+          floorTitle: floorTitle,
+          slotNumber: continuousSlotNumber,
+          slotId: uniqueSlotId,
+      };
+  
+      setDoc(checkInDocRef, checkInData, { merge: true })
+        .then(() => {
+          console.log(`Check-in data saved successfully for slot ${uniqueSlotId}`);
+        })
+        .catch((error) => {
+          console.error("Error saving check-in data:", error);
+        });
     setErrorMessage("");
     handleCloseModal();
   };
@@ -1224,55 +1243,82 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     return () => clearInterval(intervalId); // Cleanup the interval
   }, [slotSets, user.managementName, db]);
   
+  const updateFirestore = async (floorTitle, slotIndex, additionalFee, exceedingLimit) => {
+    const uniqueDocName = `slot_${floorTitle}_${slotIndex}`;
+    const slotRef = doc(db, "slot", user.managementName, "slotData", uniqueDocName);
+    const reportRef = doc(db, "reports", user.managementName, "daily", uniqueDocName);
+
+    // Update the slot details
+    try {
+        await updateDoc(slotRef, {
+            "userDetails.additionalFee": additionalFee,
+            "userDetails.exceedingLimit": exceedingLimit
+        });
+        console.log(`Updated Firestore for slot ${uniqueDocName} with Additional Fee: ${additionalFee} and Exceeding Limit: ${exceedingLimit}`);
+    } catch (error) {
+        console.error("Failed to update Firestore for slot " + uniqueDocName, error);
+    }
+
+    // Check if the report exists, then update or create it
+    const reportSnap = await getDoc(reportRef);
+    if (reportSnap.exists()) {
+        try {
+            await updateDoc(reportRef, {
+                "userDetails.additionalFee": additionalFee,
+                "userDetails.exceedingLimit": exceedingLimit,
+            });
+            console.log(`Updated report for slot ${uniqueDocName} with Additional Fee: ${additionalFee} and Exceeding Limit: ${exceedingLimit}`);
+        } catch (error) {
+            console.error("Failed to update report for slot " + uniqueDocName, error);
+        }
+    } else {
+        try {
+            await setDoc(reportRef, {
+                "userDetails": {
+                    "additionalFee": additionalFee,
+                    "exceedingLimit": exceedingLimit
+                },
+            });
+            console.log(`Created report document for slot ${uniqueDocName} as it did not exist.`);
+        } catch (error) {
+            console.error("Failed to create report document for slot " + uniqueDocName, error);
+        }
+    }
+};
+
+
+  
   useEffect(() => {
     const updateSlotsDurations = () => {
       const updatedSets = [...slotSets];
-      const currentTime = Date.now(); // Get current timestamp in milliseconds
-  
-      updatedSets.forEach((slotSet, floorIndex) => {
+      const currentTime = Date.now();
+    
+      updatedSets.forEach((slotSet) => {
+        const floorTitle = slotSet.title;
         slotSet.slots.forEach((slot, slotIndex) => {
-          // Check if the slot is occupied
           if (slot.occupied) {
-            // Prioritize timestamp in userDetails, fallback to slot.timestamp if not found
             const timestamp = slot.userDetails?.timestamp || slot.timestamp;
-  
             if (timestamp) {
-              // Ensure timestamp is correctly formatted (Firestore timestamp is in seconds)
-              const slotTimestamp = timestamp.seconds ? timestamp.seconds * 1000 : timestamp * 1000; // Convert Firestore timestamp to milliseconds
-              const durationInMillis = currentTime - slotTimestamp; // Duration in milliseconds
-              const durationInMinutes = Math.floor(durationInMillis / (1000 * 60)); // Convert to minutes
-  
-              console.log(`Slot ${slotIndex + 1} on floor "${slotSet.title}" has been occupied for ${durationInMinutes} minutes.`);
-  
-              // Check if the duration exceeds the grace period and calculate additional fee
+              const slotTimestamp = timestamp.seconds ? timestamp.seconds * 1000 : timestamp;
+              const durationInMillis = currentTime - slotTimestamp;
+              const durationInMinutes = Math.floor(durationInMillis / (1000 * 60));
+    
               if (slot.userDetails?.gracePeriod && durationInMinutes > slot.userDetails.gracePeriod) {
                 const additionalFee = (durationInMinutes - slot.userDetails.gracePeriod) * slot.userDetails.continuousParkingFee;
                 const exceedingLimit = durationInMinutes - slot.userDetails.gracePeriod;
-                console.log(`Additional fee for slot ${slotIndex + 1}: ${additionalFee} (calculated from ${durationInMinutes - slot.userDetails.gracePeriod} minutes).`);
-                
-                // Update the user details with the additional fee
-                updatedSets[floorIndex].slots[slotIndex] = {
-                  ...slot,
-                  userDetails: {
-                    ...slot.userDetails,
-                    additionalFee,
-                    exceedingLimit, // Add the calculated additional fee to the user details
-                  },
-                };
-              } else {
-                // If within the grace period, don't add any additional fee
-                updatedSets[floorIndex].slots[slotIndex] = {
-                  ...slot,
-                  userDetails: {
-                    ...slot.userDetails,
-                    additionalFee: 0,
-                    exceedingLimit: 0, // Ensure additional fee is set to 0
-                  },
-                };
+    
+                // Only perform Firestore update if the calculated fee or limit changes
+                if (slot.userDetails.additionalFee !== additionalFee || slot.userDetails.exceedingLimit !== exceedingLimit) {
+                  // Update Firestore using floorTitle and slotIndex
+                  updateFirestore(floorTitle, slotIndex, additionalFee, exceedingLimit);
+                }
+              } else if (slot.userDetails.additionalFee !== 0 || slot.userDetails.exceedingLimit !== 0) {
+                updateFirestore(floorTitle, slotIndex, 0, 0);  // Reset fees in Firestore if within grace period
+                slot.userDetails.additionalFee = 0;
+                slot.userDetails.exceedingLimit = 0;
               }
             } else {
-              // If the timestamp is not found either in userDetails or in the slot, handle accordingly
-              console.log(`Slot ${slotIndex + 1} on floor "${slotSet.title}" is missing a timestamp. Skipping duration calculation.`);
+              console.log(`Slot ${slotIndex + 1} on floor "${slotSet.title}" is missing a timestamp.`);
             }
           }
         });
@@ -1284,10 +1330,11 @@ const searchInFirebaseSecondInput = async (searchInput, showAlert = true) => {
     const intervalId = setInterval(() => {
       console.log("Updating slot durations...");
       updateSlotsDurations();
-    }, 1000); // Update every second
+    }, 1000);  // Consider increasing this interval if possible to reduce load
   
-    return () => clearInterval(intervalId); // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
   }, [slotSets]);
+  
   
 
 
